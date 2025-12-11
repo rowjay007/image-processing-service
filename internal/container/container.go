@@ -1,0 +1,90 @@
+package container
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"image-processing-service/internal/adapters/auth"
+	"image-processing-service/internal/adapters/http/handlers"
+	"image-processing-service/internal/adapters/http/middleware"
+	"image-processing-service/internal/adapters/persistence"
+	"image-processing-service/internal/adapters/processor"
+	"image-processing-service/internal/adapters/storage"
+	appAuth "image-processing-service/internal/application/auth"
+	appImage "image-processing-service/internal/application/image"
+	"image-processing-service/internal/config"
+)
+
+type Container struct {
+	Config *config.Config
+	DB     *pgxpool.Pool
+
+	AuthHandler    *handlers.AuthHandler
+	AuthMiddleware *middleware.AuthMiddleware
+
+	ImageHandler *handlers.ImageHandler
+}
+
+func NewContainer() (*Container, error) {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	dbConfig, err := pgxpool.ParseConfig(cfg.Supabase.DBURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse db config: %w", err)
+	}
+	dbConfig.MaxConns = int32(cfg.Supabase.MaxConns)
+	dbConfig.MinConns = int32(cfg.Supabase.MinConns)
+	dbConfig.MaxConnLifetime = cfg.Supabase.MaxConnLifetime
+	dbConfig.MaxConnIdleTime = cfg.Supabase.MaxConnIdleTime
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), dbConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to db: %w", err)
+	}
+	
+	if err := pool.Ping(context.Background()); err != nil {
+		log.Printf("Warning: Failed to ping database: %v", err)
+	}
+
+	userRepo := persistence.NewPostgresUserRepository(pool)
+	imageRepo := persistence.NewPostgresImageRepository(pool)
+	
+	storage, err := storage.NewCloudinaryStorage(cfg.Cloudinary)
+	if err != nil {
+		return nil, fmt.Errorf("failed to init storage: %w", err)
+	}
+	
+	processor := processor.NewStdLibImageProcessor()
+	
+	jwtProvider := auth.NewJWTProvider(cfg.JWT)
+	hasher := auth.NewBcryptPasswordHasher()
+
+	registerUC := appAuth.NewRegisterUserUseCase(userRepo)
+	loginUC := appAuth.NewLoginUserUseCase(userRepo, hasher, jwtProvider)
+	
+	uploadUC := appImage.NewUploadImageUseCase(imageRepo, storage, processor)
+
+	authHandler := handlers.NewAuthHandler(registerUC, loginUC, hasher)
+	authMiddleware := middleware.NewAuthMiddleware(jwtProvider)
+	imageHandler := handlers.NewImageHandler(uploadUC)
+
+	return &Container{
+		Config:         cfg,
+		DB:             pool,
+		AuthHandler:    authHandler,
+		AuthMiddleware: authMiddleware,
+		ImageHandler:   imageHandler,
+	}, nil
+}
+
+func (c *Container) Close() {
+	if c.DB != nil {
+		c.DB.Close()
+	}
+}
