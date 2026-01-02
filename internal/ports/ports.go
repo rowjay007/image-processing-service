@@ -64,12 +64,15 @@ type Cache interface {
 }
 
 // TransformJob represents an asynchronous image transformation task.
+// TransformJob represents an asynchronous image transformation task.
 type TransformJob struct {
-	JobID    string                    `json:"job_id"`
-	ImageID  image.ImageID             `json:"image_id"`
-	OwnerID  user.UserID               `json:"owner_id"`
-	Spec     *image.TransformationSpec `json:"spec"`
-	SpecHash string                    `json:"spec_hash"`
+	JobID     string                    `json:"job_id"`
+	ImageID   string                    `json:"image_id"`
+	VariantID string                    `json:"variant_id"`
+	OwnerID   string                    `json:"owner_id"`
+	Spec      *image.TransformationSpec `json:"spec"`
+	SpecHash  string                    `json:"spec_hash"`
+	CreatedAt time.Time                 `json:"created_at"`
 }
 
 // Queue defines operations for asynchronous job processing.

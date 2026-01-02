@@ -1,0 +1,34 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Build all binaries
+    cmds:
+      - go build -o bin/api cmd/api/main.go
+      - go build -o bin/worker cmd/worker/main.go
+      - go build -o bin/migrate cmd/migrate/main.go
+
+  run:api:
+    desc: Run the API server
+    cmds:
+      - go run cmd/api/main.go
+
+  run:worker:
+    desc: Run the background worker
+    cmds:
+      - go run cmd/worker/main.go
+
+  db:migrate:
+    desc: Run database migrations
+    cmds:
+      - go run cmd/migrate/main.go
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test ./... -v
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf bin/

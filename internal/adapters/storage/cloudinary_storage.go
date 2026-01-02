@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cloudinary/cloudinary-go/v2"
+	"github.com/cloudinary/cloudinary-go/v2/api"
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 
 	"image-processing-service/internal/config"
@@ -30,9 +31,9 @@ func NewCloudinaryStorage(cfg config.CloudinaryConfig) (*CloudinaryStorage, erro
 
 func (s *CloudinaryStorage) Put(ctx context.Context, key string, reader io.Reader, contentType string, size int64) (string, error) {
 	params := uploader.UploadParams{
-		PublicID: key,
-		Folder:   s.config.Folder,
-		Overwrite: true,
+		PublicID:     key,
+		Folder:       s.config.Folder,
+		Overwrite:    api.Bool(true),
 		ResourceType: "image",
 	}
 

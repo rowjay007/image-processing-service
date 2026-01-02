@@ -11,11 +11,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 
 	"image-processing-service/internal/container"
 )
 
 func main() {
+	// Load .env
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
+	}
+
 	// Initialize Container
 	c, err := container.NewContainer()
 	if err != nil {
@@ -62,6 +68,9 @@ func main() {
 			images := protected.Group("/images")
 			{
 				images.POST("", c.ImageHandler.Upload)
+				images.POST("/:id/transform", c.ImageHandler.Transform)
+				images.GET("", c.ImageHandler.List)
+				images.GET("/:id", c.ImageHandler.Get)
 			}
 		}
 	}

@@ -12,6 +12,7 @@ import (
 	"image-processing-service/internal/adapters/http/middleware"
 	"image-processing-service/internal/adapters/persistence"
 	"image-processing-service/internal/adapters/processor"
+	"image-processing-service/internal/adapters/queue"
 	"image-processing-service/internal/adapters/storage"
 	appAuth "image-processing-service/internal/application/auth"
 	appImage "image-processing-service/internal/application/image"
@@ -62,6 +63,11 @@ func NewContainer() (*Container, error) {
 	
 	processor := processor.NewStdLibImageProcessor()
 	
+	queue, err := queue.NewCloudAMQPQueue(cfg.CloudAMQP)
+	if err != nil {
+		return nil, fmt.Errorf("failed to init queue: %w", err)
+	}
+	
 	jwtProvider := auth.NewJWTProvider(cfg.JWT)
 	hasher := auth.NewBcryptPasswordHasher()
 
@@ -69,10 +75,13 @@ func NewContainer() (*Container, error) {
 	loginUC := appAuth.NewLoginUserUseCase(userRepo, hasher, jwtProvider)
 	
 	uploadUC := appImage.NewUploadImageUseCase(imageRepo, storage, processor)
+	asyncTransformUC := appImage.NewAsyncTransformImageUseCase(imageRepo, queue)
+	getUC := appImage.NewGetImageUseCase(imageRepo)
+	listUC := appImage.NewListImagesUseCase(imageRepo)
 
 	authHandler := handlers.NewAuthHandler(registerUC, loginUC, hasher)
 	authMiddleware := middleware.NewAuthMiddleware(jwtProvider)
-	imageHandler := handlers.NewImageHandler(uploadUC)
+	imageHandler := handlers.NewImageHandler(uploadUC, asyncTransformUC, getUC, listUC)
 
 	return &Container{
 		Config:         cfg,
