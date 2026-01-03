@@ -1,5 +1,8 @@
 # API Reference
 
+Detailed specifications for all ports and interfaces can be found in the [Ports Specification](architecture/ports.md).
+Detailed database design can be found in the [Database Design](architecture/database.md).
+
 All API endpoints are prefixed with `/api/v1` (except `/health`).
 
 ## Table of Contents
