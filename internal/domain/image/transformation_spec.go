@@ -12,25 +12,25 @@ import (
 type TransformationSpec struct {
 	Resize    *ResizeSpec    `json:"resize,omitempty"`
 	Crop      *CropSpec      `json:"crop,omitempty"`
-	Rotate    *int           `json:"rotate,omitempty"` // degrees: 90, 180, 270
-	Flip      bool           `json:"flip,omitempty"`   // vertical flip
-	Mirror    bool           `json:"mirror,omitempty"` // horizontal flip
+	Rotate    *int           `json:"rotate,omitempty" binding:"omitempty,oneof=0 90 180 270"`
+	Flip      bool           `json:"flip,omitempty"`
+	Mirror    bool           `json:"mirror,omitempty"`
 	Watermark *WatermarkSpec `json:"watermark,omitempty"`
-	Quality   *int           `json:"quality,omitempty"` // 1-100
-	Format    *string        `json:"format,omitempty"`  // jpeg, png, webp, etc.
+	Quality   *int           `json:"quality,omitempty" binding:"omitempty,min=1,max=100"`
+	Format    *string        `json:"format,omitempty" binding:"omitempty,oneof=jpeg png webp gif"`
 	Filters   *FilterSpec    `json:"filters,omitempty"`
 }
 
 type ResizeSpec struct {
-	Width  int `json:"width"`
-	Height int `json:"height"`
+	Width  int `json:"width" binding:"required_with=Height,min=1,max=8000"`
+	Height int `json:"height" binding:"required_with=Width,min=1,max=8000"`
 }
 
 type CropSpec struct {
-	Width  int `json:"width"`
-	Height int `json:"height"`
-	X      int `json:"x"`
-	Y      int `json:"y"`
+	Width  int `json:"width" binding:"required,min=1,max=8000"`
+	Height int `json:"height" binding:"required,min=1,max=8000"`
+	X      int `json:"x" binding:"min=0"`
+	Y      int `json:"y" binding:"min=0"`
 }
 
 type WatermarkSpec struct {

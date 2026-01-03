@@ -61,9 +61,15 @@ type Cache interface {
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
+	Incr(ctx context.Context, key string) (int64, error)
+	Expire(ctx context.Context, key string, ttl time.Duration) error
 }
 
-// TransformJob represents an asynchronous image transformation task.
+// RateLimiter defines operations for counting and limiting actions.
+type RateLimiter interface {
+	Allow(ctx context.Context, key string, limit int, window time.Duration) (bool, error)
+}
+
 // TransformJob represents an asynchronous image transformation task.
 type TransformJob struct {
 	JobID     string                    `json:"job_id"`

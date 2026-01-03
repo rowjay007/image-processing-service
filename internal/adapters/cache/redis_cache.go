@@ -15,6 +15,10 @@ type RedisCache struct {
 	client *redis.Client
 }
 
+func (c *RedisCache) Client() *redis.Client {
+	return c.client
+}
+
 func NewRedisCache(cfg config.UpstashConfig) (*RedisCache, error) {
 	addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
 	
@@ -68,6 +72,14 @@ func (c *RedisCache) Set(ctx context.Context, key string, value string, ttl time
 
 func (c *RedisCache) Delete(ctx context.Context, key string) error {
 	return c.client.Del(ctx, key).Err()
+}
+
+func (c *RedisCache) Incr(ctx context.Context, key string) (int64, error) {
+	return c.client.Incr(ctx, key).Result()
+}
+
+func (c *RedisCache) Expire(ctx context.Context, key string, ttl time.Duration) error {
+	return c.client.Expire(ctx, key, ttl).Err()
 }
 
 func (c *RedisCache) Close() error {

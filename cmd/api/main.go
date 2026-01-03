@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
+	"image-processing-service/internal/adapters/http/middleware"
 	"image-processing-service/internal/container"
 )
 
@@ -35,9 +36,13 @@ func main() {
 	}
 	r := gin.Default()
 
+	// Middlewares
+	r.Use(middleware.CORSMiddleware())
+	r.Use(middleware.SecurityHeadersMiddleware())
+
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "time": time.Now()})
 	})
 
 	// API Routes
@@ -45,6 +50,7 @@ func main() {
 	{
 		// Auth Routes
 		auth := v1.Group("/auth")
+		auth.Use(c.RateLimitMiddleware.Limit(5, 15*time.Minute))
 		{
 			auth.POST("/register", c.AuthHandler.Register)
 			auth.POST("/login", c.AuthHandler.Login)
@@ -67,8 +73,8 @@ func main() {
 			// Image Routes
 			images := protected.Group("/images")
 			{
-				images.POST("", c.ImageHandler.Upload)
-				images.POST("/:id/transform", c.ImageHandler.Transform)
+				images.POST("", c.RateLimitMiddleware.Limit(10, time.Hour), c.ImageHandler.Upload)
+				images.POST("/:id/transform", c.RateLimitMiddleware.Limit(50, time.Minute), c.ImageHandler.Transform)
 				images.GET("", c.ImageHandler.List)
 				images.GET("/:id", c.ImageHandler.Get)
 			}

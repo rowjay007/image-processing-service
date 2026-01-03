@@ -28,6 +28,8 @@ type Container struct {
 	AuthMiddleware *middleware.AuthMiddleware
 
 	ImageHandler *handlers.ImageHandler
+
+	RateLimitMiddleware *middleware.RateLimitMiddleware
 }
 
 func NewContainer() (*Container, error) {
@@ -98,12 +100,16 @@ func NewContainer() (*Container, error) {
 	authMiddleware := middleware.NewAuthMiddleware(jwtProvider)
 	imageHandler := handlers.NewImageHandler(uploadUC, asyncTransformUC, getUC, listUC)
 
+	rateLimiter := cache.NewRedisRateLimiter(redisCache.Client())
+	rateLimitMiddleware := middleware.NewRateLimitMiddleware(rateLimiter)
+
 	return &Container{
-		Config:         cfg,
-		DB:             pool,
-		AuthHandler:    authHandler,
-		AuthMiddleware: authMiddleware,
-		ImageHandler:   imageHandler,
+		Config:              cfg,
+		DB:                  pool,
+		AuthHandler:         authHandler,
+		AuthMiddleware:      authMiddleware,
+		ImageHandler:        imageHandler,
+		RateLimitMiddleware: rateLimitMiddleware,
 	}, nil
 }
 
