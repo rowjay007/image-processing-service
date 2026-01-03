@@ -18,6 +18,7 @@ import (
 	appAuth "image-processing-service/internal/application/auth"
 	appImage "image-processing-service/internal/application/image"
 	"image-processing-service/internal/config"
+	"image-processing-service/internal/ports"
 )
 
 type Container struct {
@@ -71,18 +72,18 @@ func NewContainer() (*Container, error) {
 		return nil, fmt.Errorf("failed to init queue: %w", err)
 	}
 	
-	// Cache
-	redisCache, err := cache.NewRedisCache(cfg.Upstash)
+	// Redis Cache & Rate Limiting (Optional/Resilient)
+	var cacheSvc ports.Cache
+	var rateLimiter ports.RateLimiter
+
+	redisSvc, err := cache.NewRedisCache(cfg.Upstash)
 	if err != nil {
-		// Log warning but don't fail? Or fail? 
-		// For now, let's fail as caching is desired.
-		// Or maybe fallback to no-op if cache fails?
-		log.Printf("Warning: Failed to init redis cache: %v", err)
-		// We could pass nil if the UseCases handle nil cache, but better to enforce it if we want it.
-		// However, preventing startup if cache is down might be too strict for some apps.
-		// Given user just verified worker, let's make it robust.
-		// For now, return error.
-		return nil, fmt.Errorf("failed to init cache: %w", err)
+		log.Printf("Warning: Failed to init redis cache: %v. Caching and Rate Limiting will be DISABLED.", err)
+		cacheSvc = cache.NewNoOpCache()
+		rateLimiter = cache.NewNoOpRateLimiter()
+	} else {
+		cacheSvc = redisSvc
+		rateLimiter = cache.NewRedisRateLimiter(redisSvc.Client())
 	}
 
 	jwtProvider := auth.NewJWTProvider(cfg.JWT)
@@ -93,14 +94,13 @@ func NewContainer() (*Container, error) {
 	
 	uploadUC := appImage.NewUploadImageUseCase(imageRepo, storage, processor)
 	asyncTransformUC := appImage.NewAsyncTransformImageUseCase(imageRepo, queue)
-	getUC := appImage.NewGetImageUseCase(imageRepo, redisCache)
-	listUC := appImage.NewListImagesUseCase(imageRepo, redisCache)
+	getUC := appImage.NewGetImageUseCase(imageRepo, cacheSvc)
+	listUC := appImage.NewListImagesUseCase(imageRepo, cacheSvc)
 
 	authHandler := handlers.NewAuthHandler(registerUC, loginUC, hasher)
 	authMiddleware := middleware.NewAuthMiddleware(jwtProvider)
 	imageHandler := handlers.NewImageHandler(uploadUC, asyncTransformUC, getUC, listUC)
 
-	rateLimiter := cache.NewRedisRateLimiter(redisCache.Client())
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(rateLimiter)
 
 	return &Container{

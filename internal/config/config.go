@@ -86,7 +86,7 @@ func LoadConfig() (*Config, error) {
 		},
 		Upstash: UpstashConfig{
 			Host:     getEnv("UPSTASH_REDIS_HOST", ""),
-			Port:     getEnv("UPSTASH_REDIS_PORT", "6380"),
+			Port:     getEnv("UPSTASH_REDIS_PORT", "6379"),
 			Password: getEnv("UPSTASH_REDIS_PASSWORD", ""),
 			TLS:      getEnvBool("UPSTASH_REDIS_TLS", true),
 		},
