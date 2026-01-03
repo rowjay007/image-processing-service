@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"image-processing-service/internal/adapters/auth"
+	"image-processing-service/internal/adapters/cache"
 	"image-processing-service/internal/adapters/http/handlers"
 	"image-processing-service/internal/adapters/http/middleware"
 	"image-processing-service/internal/adapters/persistence"
@@ -68,6 +69,20 @@ func NewContainer() (*Container, error) {
 		return nil, fmt.Errorf("failed to init queue: %w", err)
 	}
 	
+	// Cache
+	redisCache, err := cache.NewRedisCache(cfg.Upstash)
+	if err != nil {
+		// Log warning but don't fail? Or fail? 
+		// For now, let's fail as caching is desired.
+		// Or maybe fallback to no-op if cache fails?
+		log.Printf("Warning: Failed to init redis cache: %v", err)
+		// We could pass nil if the UseCases handle nil cache, but better to enforce it if we want it.
+		// However, preventing startup if cache is down might be too strict for some apps.
+		// Given user just verified worker, let's make it robust.
+		// For now, return error.
+		return nil, fmt.Errorf("failed to init cache: %w", err)
+	}
+
 	jwtProvider := auth.NewJWTProvider(cfg.JWT)
 	hasher := auth.NewBcryptPasswordHasher()
 
@@ -76,8 +91,8 @@ func NewContainer() (*Container, error) {
 	
 	uploadUC := appImage.NewUploadImageUseCase(imageRepo, storage, processor)
 	asyncTransformUC := appImage.NewAsyncTransformImageUseCase(imageRepo, queue)
-	getUC := appImage.NewGetImageUseCase(imageRepo)
-	listUC := appImage.NewListImagesUseCase(imageRepo)
+	getUC := appImage.NewGetImageUseCase(imageRepo, redisCache)
+	listUC := appImage.NewListImagesUseCase(imageRepo, redisCache)
 
 	authHandler := handlers.NewAuthHandler(registerUC, loginUC, hasher)
 	authMiddleware := middleware.NewAuthMiddleware(jwtProvider)

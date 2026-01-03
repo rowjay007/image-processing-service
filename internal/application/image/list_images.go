@@ -10,12 +10,14 @@ import (
 )
 
 type ListImagesUseCase struct {
-	repo ports.ImageRepository
+	repo  ports.ImageRepository
+	cache ports.Cache
 }
 
-func NewListImagesUseCase(repo ports.ImageRepository) *ListImagesUseCase {
+func NewListImagesUseCase(repo ports.ImageRepository, cache ports.Cache) *ListImagesUseCase {
 	return &ListImagesUseCase{
-		repo: repo,
+		repo:  repo,
+		cache: cache,
 	}
 }
 
