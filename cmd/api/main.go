@@ -41,8 +41,13 @@ func main() {
 	r.Use(middleware.SecurityHeadersMiddleware())
 
 	// Health check
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok", "time": time.Now()})
+	r.GET("/health", func(ctx *gin.Context) {
+		log.Println("Health check GET request received")
+		ctx.JSON(http.StatusOK, gin.H{"status": "ok", "time": time.Now()})
+	})
+	r.HEAD("/health", func(ctx *gin.Context) {
+		log.Println("Health check HEAD request received")
+		ctx.Status(http.StatusOK)
 	})
 
 	// API Routes
