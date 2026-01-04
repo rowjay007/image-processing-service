@@ -6,11 +6,13 @@ import (
 	"log"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 
 	"image-processing-service/internal/adapters/auth"
 	"image-processing-service/internal/adapters/cache"
 	"image-processing-service/internal/adapters/http/handlers"
 	"image-processing-service/internal/adapters/http/middleware"
+	"image-processing-service/internal/adapters/logging"
 	"image-processing-service/internal/adapters/persistence"
 	"image-processing-service/internal/adapters/processor"
 	"image-processing-service/internal/adapters/queue"
@@ -23,6 +25,7 @@ import (
 
 type Container struct {
 	Config *config.Config
+	Logger *zap.Logger
 	DB     *pgxpool.Pool
 
 	AuthHandler    *handlers.AuthHandler
@@ -38,6 +41,12 @@ func NewContainer() (*Container, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
+
+	logger, err := logging.NewLogger(cfg.Server.Environment)
+	if err != nil {
+		return nil, fmt.Errorf("failed to init logger: %w", err)
+	}
+	zap.ReplaceGlobals(logger)
 
 	dbConfig, err := pgxpool.ParseConfig(cfg.Supabase.DBURL)
 	if err != nil {
@@ -105,6 +114,7 @@ func NewContainer() (*Container, error) {
 
 	return &Container{
 		Config:              cfg,
+		Logger:              logger,
 		DB:                  pool,
 		AuthHandler:         authHandler,
 		AuthMiddleware:      authMiddleware,

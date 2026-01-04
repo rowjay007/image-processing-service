@@ -2,82 +2,80 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
+
+	"image-processing-service/internal/adapters/logging"
 	"image-processing-service/internal/adapters/persistence"
 	"image-processing-service/internal/adapters/processor"
 	"image-processing-service/internal/adapters/queue"
 	"image-processing-service/internal/adapters/storage"
 	"image-processing-service/internal/config"
 	"image-processing-service/internal/ports"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Load .env
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
-	}
-
 	// 1. Load Config
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		panic("Failed to load config: " + err.Error())
 	}
 
-	// 2. Dependencies
+	// 2. Init Logger
+	logger, err := logging.NewLogger(cfg.Server.Environment)
+	if err != nil {
+		panic("Failed to init logger: " + err.Error())
+	}
+	defer logger.Sync()
+	zap.ReplaceGlobals(logger)
+
+	// 3. Dependencies
 	// DB
 	dbConfig, err := pgxpool.ParseConfig(cfg.Supabase.DBURL)
 	if err != nil {
-		log.Fatalf("Failed to parse DB config: %v", err)
+		logger.Fatal("Failed to parse DB config", zap.Error(err))
 	}
 	
 	pool, err := pgxpool.NewWithConfig(context.Background(), dbConfig)
 	if err != nil {
-		log.Fatalf("Failed to connect to DB: %v", err)
+		logger.Fatal("Failed to connect to DB", zap.Error(err))
 	}
 	defer pool.Close()
 
-	// Logic: Worker needs Repo to save variant status (if we implemented that)
-	// But our consumer currently only Logs.
-	// We keep Repo available for future logic.
 	_ = persistence.NewPostgresImageRepository(pool)
 
 	// Storage
-	// Worker needs storage to download original and upload variant
 	_ , err = storage.NewCloudinaryStorage(cfg.Cloudinary)
 	if err != nil {
-		log.Fatalf("Failed to init storage: %v", err)
+		logger.Fatal("Failed to init storage", zap.Error(err))
 	}
 
 	// Queue
 	q, err := queue.NewCloudAMQPQueue(cfg.CloudAMQP)
 	if err != nil {
-		log.Fatalf("Failed to init queue: %v", err)
+		logger.Fatal("Failed to init queue", zap.Error(err))
 	}
 	defer q.Close()
 
 	// Processor
 	imgProcessor := processor.NewStdLibImageProcessor()
 
-	// 3. Consumer Logic
-	log.Println("Worker starting...")
+	// 4. Consumer Logic
+	logger.Info("Worker starting...")
 	
 	err = q.Consume(context.Background(), func(job *ports.TransformJob) error {
-		log.Printf("Processing Job: %s for Image: %s", job.JobID, job.ImageID)
+		logger.Info("Processing Job", 
+			zap.String("job_id", job.JobID), 
+			zap.String("image_id", job.ImageID),
+		)
 		
-		// Logic would go here.
-		// Since StdLib processor fails, we just log.
-		
-		// Fix: job.Spec is already *TransformationSpec (pointer) in the new struct definition
 		_, err := imgProcessor.Transform(context.Background(), nil, job.Spec)
 		if err != nil {
-			log.Printf("Processor Error (expected usage of bimg): %v", err)
+			logger.Warn("Processor Error (expected usage of bimg)", zap.Error(err))
 			return nil
 		}
 		
@@ -85,12 +83,12 @@ func main() {
 	})
 	
 	if err != nil {
-		log.Fatalf("Failed to start consumer: %v", err)
+		logger.Fatal("Failed to start consumer", zap.Error(err))
 	}
 
 	// Wait for signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Worker shutting down...")
+	logger.Info("Worker shutting down...")
 }

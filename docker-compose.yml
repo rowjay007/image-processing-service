@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    command: ["/app/api"]
+    ports:
+      - "8080:8080"
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+
+  worker:
+    build: .
+    command: ["/app/worker"]
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: image_service
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"

@@ -1,10 +1,10 @@
 package config
 
 import (
-	"log"
-	"os"
-	"strconv"
+	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -71,102 +71,96 @@ type LimitsConfig struct {
 }
 
 func LoadConfig() (*Config, error) {
+	v := viper.New()
+	
+	// Default values
+	v.SetDefault("PORT", "8080")
+	v.SetDefault("ENVIRONMENT", "development")
+	v.SetDefault("GIN_MODE", "debug")
+	
+	v.SetDefault("DB_MAX_CONNS", 25)
+	v.SetDefault("DB_MIN_CONNS", 5)
+	v.SetDefault("DB_MAX_CONN_LIFETIME", time.Hour)
+	v.SetDefault("DB_MAX_CONN_IDLE_TIME", 30*time.Minute)
+	
+	v.SetDefault("UPSTASH_REDIS_PORT", "6379")
+	v.SetDefault("UPSTASH_REDIS_TLS", true)
+	
+	v.SetDefault("CLOUDINARY_FOLDER", "image-processing-service")
+	v.SetDefault("CLOUDINARY_SECURE", true)
+	v.SetDefault("CLOUDINARY_USE_AUTO_FORMAT", true)
+	v.SetDefault("CLOUDINARY_USE_AUTO_QUALITY", true)
+	
+	v.SetDefault("QUEUE_NAME", "image-transform-jobs")
+	v.SetDefault("QUEUE_DURABLE", true)
+	v.SetDefault("QUEUE_PREFETCH_COUNT", 5)
+	
+	v.SetDefault("JWT_SECRET", "secret")
+	v.SetDefault("JWT_EXPIRY", 24*time.Hour)
+	v.SetDefault("JWT_ISSUER", "image-processing-service")
+	
+	v.SetDefault("MAX_UPLOAD_SIZE", 20971520)
+	v.SetDefault("MAX_IMAGE_WIDTH", 8000)
+	v.SetDefault("MAX_IMAGE_HEIGHT", 8000)
+	v.SetDefault("RATE_LIMIT_UPLOADS", 100)
+	v.SetDefault("RATE_LIMIT_TRANSFORMS", 500)
+	v.SetDefault("RATE_LIMIT_WINDOW", time.Hour)
+
+	// Environment mapping
+	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// Load from .env if present
+	v.SetConfigFile(".env")
+	v.SetConfigType("env")
+	_ = v.ReadInConfig()
+
 	return &Config{
 		Server: ServerConfig{
-			Port:        getEnv("PORT", "8080"),
-			Environment: getEnv("ENVIRONMENT", "development"),
-			GinMode:     getEnv("GIN_MODE", "debug"),
+			Port:        v.GetString("PORT"),
+			Environment: v.GetString("ENVIRONMENT"),
+			GinMode:     v.GetString("GIN_MODE"),
 		},
 		Supabase: SupabaseConfig{
-			DBURL:           getEnv("SUPABASE_DB_URL", ""),
-			MaxConns:        getEnvInt("DB_MAX_CONNS", 25),
-			MinConns:        getEnvInt("DB_MIN_CONNS", 5),
-			MaxConnLifetime: getEnvDuration("DB_MAX_CONN_LIFETIME", time.Hour),
-			MaxConnIdleTime: getEnvDuration("DB_MAX_CONN_IDLE_TIME", 30*time.Minute),
+			DBURL:           v.GetString("SUPABASE_DB_URL"),
+			MaxConns:        v.GetInt("DB_MAX_CONNS"),
+			MinConns:        v.GetInt("DB_MIN_CONNS"),
+			MaxConnLifetime: v.GetDuration("DB_MAX_CONN_LIFETIME"),
+			MaxConnIdleTime: v.GetDuration("DB_MAX_CONN_IDLE_TIME"),
 		},
 		Upstash: UpstashConfig{
-			Host:     getEnv("UPSTASH_REDIS_HOST", ""),
-			Port:     getEnv("UPSTASH_REDIS_PORT", "6379"),
-			Password: getEnv("UPSTASH_REDIS_PASSWORD", ""),
-			TLS:      getEnvBool("UPSTASH_REDIS_TLS", true),
+			Host:     v.GetString("UPSTASH_REDIS_HOST"),
+			Port:     v.GetString("UPSTASH_REDIS_PORT"),
+			Password: v.GetString("UPSTASH_REDIS_PASSWORD"),
+			TLS:      v.GetBool("UPSTASH_REDIS_TLS"),
 		},
 		Cloudinary: CloudinaryConfig{
-			CloudName:      getEnv("CLOUDINARY_CLOUD_NAME", ""),
-			APIKey:         getEnv("CLOUDINARY_API_KEY", ""),
-			APISecret:      getEnv("CLOUDINARY_API_SECRET", ""),
-			Folder:         getEnv("CLOUDINARY_FOLDER", "image-processing-service"),
-			Secure:         getEnvBool("CLOUDINARY_SECURE", true),
-			UseAutoFormat:  getEnvBool("CLOUDINARY_USE_AUTO_FORMAT", true),
-			UseAutoQuality: getEnvBool("CLOUDINARY_USE_AUTO_QUALITY", true),
+			CloudName:      v.GetString("CLOUDINARY_CLOUD_NAME"),
+			APIKey:         v.GetString("CLOUDINARY_API_KEY"),
+			APISecret:      v.GetString("CLOUDINARY_API_SECRET"),
+			Folder:         v.GetString("CLOUDINARY_FOLDER"),
+			Secure:         v.GetBool("CLOUDINARY_SECURE"),
+			UseAutoFormat:  v.GetBool("CLOUDINARY_USE_AUTO_FORMAT"),
+			UseAutoQuality: v.GetBool("CLOUDINARY_USE_AUTO_QUALITY"),
 		},
 		CloudAMQP: CloudAMQPConfig{
-			URL:           getEnv("CLOUDAMQP_URL", ""),
-			QueueName:     getEnv("QUEUE_NAME", "image-transform-jobs"),
-			QueueDurable:  getEnvBool("QUEUE_DURABLE", true),
-			PrefetchCount: getEnvInt("QUEUE_PREFETCH_COUNT", 5),
+			URL:           v.GetString("CLOUDAMQP_URL"),
+			QueueName:     v.GetString("QUEUE_NAME"),
+			QueueDurable:  v.GetBool("QUEUE_DURABLE"),
+			PrefetchCount: v.GetInt("QUEUE_PREFETCH_COUNT"),
 		},
 		JWT: JWTConfig{
-			Secret: getEnv("JWT_SECRET", "secret"),
-			Expiry: getEnvDuration("JWT_EXPIRY", 15*time.Minute),
-			Issuer: getEnv("JWT_ISSUER", "image-processing-service"),
+			Secret: v.GetString("JWT_SECRET"),
+			Expiry: v.GetDuration("JWT_EXPIRY"),
+			Issuer: v.GetString("JWT_ISSUER"),
 		},
 		Limits: LimitsConfig{
-			MaxUploadSize:       getEnvInt64("MAX_UPLOAD_SIZE", 20971520),
-			MaxImageWidth:       getEnvInt("MAX_IMAGE_WIDTH", 8000),
-			MaxImageHeight:      getEnvInt("MAX_IMAGE_HEIGHT", 8000),
-			RateLimitUploads:    getEnvInt("RATE_LIMIT_UPLOADS", 100),
-			RateLimitTransforms: getEnvInt("RATE_LIMIT_TRANSFORMS", 500),
-			RateLimitWindow:     getEnvDuration("RATE_LIMIT_WINDOW", time.Hour),
+			MaxUploadSize:       v.GetInt64("MAX_UPLOAD_SIZE"),
+			MaxImageWidth:       v.GetInt("MAX_IMAGE_WIDTH"),
+			MaxImageHeight:      v.GetInt("MAX_IMAGE_HEIGHT"),
+			RateLimitUploads:    v.GetInt("RATE_LIMIT_UPLOADS"),
+			RateLimitTransforms: v.GetInt("RATE_LIMIT_TRANSFORMS"),
+			RateLimitWindow:     v.GetDuration("RATE_LIMIT_WINDOW"),
 		},
 	}, nil
-}
-
-// Helpers
-
-func getEnv(key, fallback string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return fallback
-}
-
-func getEnvInt(key string, fallback int) int {
-	if value, exists := os.LookupEnv(key); exists {
-		if intVal, err := strconv.Atoi(value); err == nil {
-			return intVal
-		}
-	}
-	return fallback
-}
-
-func getEnvInt64(key string, fallback int64) int64 {
-	if value, exists := os.LookupEnv(key); exists {
-		if intVal, err := strconv.ParseInt(value, 10, 64); err == nil {
-			return intVal
-		}
-	}
-	return fallback
-}
-
-func getEnvBool(key string, fallback bool) bool {
-	if value, exists := os.LookupEnv(key); exists {
-		if boolVal, err := strconv.ParseBool(value); err == nil {
-			return boolVal
-		}
-	}
-	return fallback
-}
-
-func getEnvDuration(key string, fallback time.Duration) time.Duration {
-	if value, exists := os.LookupEnv(key); exists {
-		if durationVal, err := time.ParseDuration(value); err == nil {
-			return durationVal
-		}
-		// Try parsing as integer seconds if duration parse fails
-		if intVal, err := strconv.Atoi(value); err == nil {
-			return time.Duration(intVal) * time.Second
-		}
-		log.Printf("Warning: Invalid duration format for %s: %s. Using fallback.", key, value)
-	}
-	return fallback
 }
