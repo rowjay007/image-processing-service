@@ -16,6 +16,7 @@ import (
 type ImageHandler struct {
 	uploadUC         *appImage.UploadImageUseCase
 	asyncTransformUC *appImage.AsyncTransformImageUseCase
+	syncTransformUC  *appImage.TransformImageSyncUseCase
 	getUC            *appImage.GetImageUseCase
 	listUC           *appImage.ListImagesUseCase
 }
@@ -23,12 +24,14 @@ type ImageHandler struct {
 func NewImageHandler(
 	uploadUC *appImage.UploadImageUseCase, 
 	asyncTransformUC *appImage.AsyncTransformImageUseCase,
+	syncTransformUC *appImage.TransformImageSyncUseCase,
 	getUC *appImage.GetImageUseCase,
 	listUC *appImage.ListImagesUseCase,
 ) *ImageHandler {
 	return &ImageHandler{
 		uploadUC:         uploadUC,
 		asyncTransformUC: asyncTransformUC,
+		syncTransformUC:  syncTransformUC,
 		getUC:            getUC,
 		listUC:           listUC,
 	}
@@ -96,11 +99,27 @@ func (h *ImageHandler) Transform(c *gin.Context) {
 		return
 	}
 	
-	input := appImage.TransformInput{
-		ImageID: image.ImageID(idStr),
-		Spec:    spec,
+	imageID := image.ImageID(idStr)
+	isSync := c.Query("sync") == "true"
+
+	if isSync {
+		input := appImage.SyncTransformInput{
+			ImageID: imageID,
+			Spec:    spec,
+		}
+		result, err := h.syncTransformUC.Execute(c.Request.Context(), input)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("sync transform failed: %v", err)})
+			return
+		}
+		c.JSON(http.StatusOK, result)
+		return
 	}
 
+	input := appImage.AsyncTransformInput{
+		ImageID: imageID,
+		Spec:    spec,
+	}
 	result, err := h.asyncTransformUC.Execute(c.Request.Context(), input)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("transform failed: %v", err)})

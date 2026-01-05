@@ -74,7 +74,7 @@ func NewContainer() (*Container, error) {
 		return nil, fmt.Errorf("failed to init storage: %w", err)
 	}
 	
-	processor := processor.NewStdLibImageProcessor()
+	imgProcessor := processor.NewBimgProcessor()
 	
 	queue, err := queue.NewCloudAMQPQueue(cfg.CloudAMQP)
 	if err != nil {
@@ -101,14 +101,15 @@ func NewContainer() (*Container, error) {
 	registerUC := appAuth.NewRegisterUserUseCase(userRepo)
 	loginUC := appAuth.NewLoginUserUseCase(userRepo, hasher, jwtProvider)
 	
-	uploadUC := appImage.NewUploadImageUseCase(imageRepo, storage, processor)
+	uploadUC := appImage.NewUploadImageUseCase(imageRepo, storage, imgProcessor)
 	asyncTransformUC := appImage.NewAsyncTransformImageUseCase(imageRepo, queue)
+	syncTransformUC := appImage.NewTransformImageSyncUseCase(imageRepo, storage, imgProcessor)
 	getUC := appImage.NewGetImageUseCase(imageRepo, cacheSvc)
 	listUC := appImage.NewListImagesUseCase(imageRepo, cacheSvc)
 
 	authHandler := handlers.NewAuthHandler(registerUC, loginUC, hasher)
 	authMiddleware := middleware.NewAuthMiddleware(jwtProvider)
-	imageHandler := handlers.NewImageHandler(uploadUC, asyncTransformUC, getUC, listUC)
+	imageHandler := handlers.NewImageHandler(uploadUC, asyncTransformUC, syncTransformUC, getUC, listUC)
 
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(rateLimiter)
 

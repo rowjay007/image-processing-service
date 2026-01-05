@@ -1,0 +1,1 @@
+github.com/h2non/bimg: exec: "pkg-config": executable file not found in $PATH
