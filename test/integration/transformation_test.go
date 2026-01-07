@@ -99,7 +99,9 @@ func getTestToken(t *testing.T, r *gin.Engine, c *container.Container) string {
 	r.POST("/auth/register", c.AuthHandler.Register)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	// assert.Equal(t, http.StatusCreated, w.Code) // might fail if user exists, but it's okay for test
+	if w.Code != http.StatusCreated && w.Code != http.StatusConflict {
+		t.Fatalf("Expected 201 Created or 409 Conflict for register, got %d: %s", w.Code, w.Body.String())
+	}
 
 	// Login
 	loginBody := fmt.Sprintf(`{"username":"%s", "password":"%s"}`, username, password)
