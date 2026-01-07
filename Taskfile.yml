@@ -28,7 +28,18 @@ tasks:
     cmds:
       - go test ./... -v
 
+  test:ci:
+    desc: Run tests for CI with coverage
+    cmds:
+      - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run ./... --timeout=5m
+
   clean:
     desc: Clean build artifacts
     cmds:
       - rm -rf bin/
+      - rm -f coverage.txt

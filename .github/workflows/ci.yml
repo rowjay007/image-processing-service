@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          args: --timeout=5m
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvips-dev
+          go mod download
+
+      - name: Run Tests
+        run: go test -v -short -race -coverprofile=coverage.txt ./...
+
+      - name: Upload Coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage.txt
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run gosec
+        uses: securego/gosec@master
+        with:
+          args: ./...
