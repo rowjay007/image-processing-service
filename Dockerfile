@@ -19,18 +19,18 @@ RUN go build -o /app/api cmd/api/main.go
 # Build Worker
 RUN go build -o /app/worker cmd/worker/main.go
 
-# Final stage
-FROM alpine:latest
-
-# Install runtime dependencies for vips
+# Common runtime stage
+FROM alpine:latest AS runtime
 RUN apk add --no-cache vips ca-certificates
-
 WORKDIR /app
 
-# Copy binaries from builder
+# API stage
+FROM runtime AS api
 COPY --from=builder /app/api /app/api
-COPY --from=builder /app/worker /app/worker
-
-# Default to API
 EXPOSE 8080
 CMD ["/app/api"]
+
+# Worker stage
+FROM runtime AS worker
+COPY --from=builder /app/worker /app/worker
+CMD ["/app/worker"]
