@@ -91,7 +91,7 @@ func (p *BimgProcessor) Transform(ctx context.Context, srcReader io.Reader, spec
 
 	return &ports.ProcessedImage{
 		Data:     newBuffer,
-		MimeType: bimg.DetermineImageTypeName(newBuffer),
+		MimeType: p.getMimeType(bimg.DetermineImageType(newBuffer)),
 		Width:    metadata.Size.Width,
 		Height:   metadata.Size.Height,
 		Size:     int64(len(newBuffer)),
@@ -112,9 +112,34 @@ func (p *BimgProcessor) ExtractMetadata(ctx context.Context, reader io.Reader) (
 	return &ports.ImageMetadata{
 		Width:    size.Width,
 		Height:   size.Height,
-		MimeType: bimg.DetermineImageTypeName(buffer),
+		MimeType: p.getMimeType(bimg.DetermineImageType(buffer)),
 		Size:     int64(len(buffer)),
 	}, nil
+}
+
+func (p *BimgProcessor) getMimeType(t bimg.ImageType) string {
+	switch t {
+	case bimg.JPEG:
+		return "image/jpeg"
+	case bimg.PNG:
+		return "image/png"
+	case bimg.WEBP:
+		return "image/webp"
+	case bimg.GIF:
+		return "image/gif"
+	case bimg.TIFF:
+		return "image/tiff"
+	case bimg.PDF:
+		return "application/pdf"
+	case bimg.SVG:
+		return "image/svg+xml"
+	case bimg.HEIF:
+		return "image/heif"
+	case bimg.AVIF:
+		return "image/avif"
+	default:
+		return "application/octet-stream"
+	}
 }
 
 func (p *BimgProcessor) toBimgType(format string) bimg.ImageType {
@@ -133,6 +158,10 @@ func (p *BimgProcessor) toBimgType(format string) bimg.ImageType {
 		return bimg.PDF
 	case "svg":
 		return bimg.SVG
+	case "heif":
+		return bimg.HEIF
+	case "avif":
+		return bimg.AVIF
 	case "magick":
 		return bimg.MAGICK
 	default:

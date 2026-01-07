@@ -78,8 +78,12 @@ func TestSyncTransformationIntegration(t *testing.T) {
 	variantID1 := result["id"].(string)
 
 	// 4. Request the SAME Transformation Again (Deduplication Check)
+	req2, _ := http.NewRequest("POST", fmt.Sprintf("/images/%s/transform?sync=true", imageID), bytes.NewBuffer(specJSON))
+	req2.Header.Set("Authorization", "Bearer "+token)
+	req2.Header.Set("Content-Type", "application/json")
+
 	w2 := httptest.NewRecorder()
-	r.ServeHTTP(w2, req)
+	r.ServeHTTP(w2, req2)
 
 	assert.Equal(t, http.StatusOK, w2.Code)
 
