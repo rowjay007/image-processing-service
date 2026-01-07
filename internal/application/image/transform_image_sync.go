@@ -77,7 +77,9 @@ func (uc *TransformImageSyncUseCase) Execute(ctx context.Context, input SyncTran
 	if err != nil {
 		return nil, fmt.Errorf("failed to download original image: %w", err)
 	}
-	defer srcReader.Close()
+	defer func() {
+		_ = srcReader.Close()
+	}()
 
 	// 5. Transform image
 	processed, err := uc.processor.Transform(ctx, srcReader, &input.Spec)
@@ -89,7 +91,7 @@ func (uc *TransformImageSyncUseCase) Execute(ctx context.Context, input SyncTran
 	// 6. Upload variant
 	ext := uc.getExtension(processed.MimeType)
 	variantKey := fmt.Sprintf("variants/%s/%s%s", input.ImageID, specHash, ext)
-	
+
 	_, err = uc.storage.Put(ctx, variantKey, bytes.NewReader(processed.Data), processed.MimeType, processed.Size)
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload variant: %w", err)

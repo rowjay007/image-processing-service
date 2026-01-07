@@ -22,7 +22,7 @@ type ImageHandler struct {
 }
 
 func NewImageHandler(
-	uploadUC *appImage.UploadImageUseCase, 
+	uploadUC *appImage.UploadImageUseCase,
 	asyncTransformUC *appImage.AsyncTransformImageUseCase,
 	syncTransformUC *appImage.TransformImageSyncUseCase,
 	getUC *appImage.GetImageUseCase,
@@ -69,7 +69,9 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open file"})
 		return
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	input := appImage.UploadInput{
 		OwnerID:  userID,
@@ -120,14 +122,14 @@ func (h *ImageHandler) Transform(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "image id required"})
 		return
 	}
-	
+
 	// Parse Body (Spec)
 	var spec image.TransformationSpec
 	if err := c.ShouldBindJSON(&spec); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid transformation spec"})
 		return
 	}
-	
+
 	imageID := image.ImageID(idStr)
 	isSync := c.Query("sync") == "true"
 
@@ -154,9 +156,9 @@ func (h *ImageHandler) Transform(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("transform failed: %v", err)})
 		return
 	}
-	
+
 	c.JSON(http.StatusAccepted, gin.H{
-		"message": "Transformation accepted",
+		"message":    "Transformation accepted",
 		"variant_id": result.ID,
 	})
 }
@@ -211,19 +213,19 @@ func (h *ImageHandler) List(c *gin.Context) {
 		return
 	}
 	userID := user.UserID(userIDStr.(string))
-	
+
 	input := appImage.ListImagesInput{
 		OwnerID: userID,
 		Offset:  0,
 		Limit:   10,
 	}
 	// TODO: Parse offset/limit from query params if needed
-	
+
 	result, err := h.listUC.Execute(c.Request.Context(), input)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list images"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, result)
 }

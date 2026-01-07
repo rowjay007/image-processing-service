@@ -61,26 +61,26 @@ func NewContainer() (*Container, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to db: %w", err)
 	}
-	
-	if err := pool.Ping(context.Background()); err != nil {
-		log.Printf("Warning: Failed to ping database: %v", err)
+
+	if perr := pool.Ping(context.Background()); perr != nil {
+		log.Printf("Warning: Failed to ping database: %v", perr)
 	}
 
 	userRepo := persistence.NewPostgresUserRepository(pool)
 	imageRepo := persistence.NewPostgresImageRepository(pool)
-	
+
 	storage, err := storage.NewCloudinaryStorage(cfg.Cloudinary)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init storage: %w", err)
 	}
-	
+
 	imgProcessor := processor.NewBimgProcessor()
-	
+
 	queue, err := queue.NewCloudAMQPQueue(cfg.CloudAMQP)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init queue: %w", err)
 	}
-	
+
 	// Redis Cache & Rate Limiting (Optional/Resilient)
 	var cacheSvc ports.Cache
 	var rateLimiter ports.RateLimiter
@@ -100,7 +100,7 @@ func NewContainer() (*Container, error) {
 
 	registerUC := appAuth.NewRegisterUserUseCase(userRepo)
 	loginUC := appAuth.NewLoginUserUseCase(userRepo, hasher, jwtProvider)
-	
+
 	uploadUC := appImage.NewUploadImageUseCase(imageRepo, storage, imgProcessor)
 	asyncTransformUC := appImage.NewAsyncTransformImageUseCase(imageRepo, queue)
 	syncTransformUC := appImage.NewTransformImageSyncUseCase(imageRepo, storage, imgProcessor)

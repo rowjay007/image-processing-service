@@ -30,7 +30,9 @@ func main() {
 	if err != nil {
 		panic("Failed to init logger: " + err.Error())
 	}
-	defer logger.Sync()
+	defer func() {
+		_ = logger.Sync()
+	}()
 	zap.ReplaceGlobals(logger)
 
 	// 3. Dependencies
@@ -39,7 +41,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to parse DB config", zap.Error(err))
 	}
-	
+
 	pool, err := pgxpool.NewWithConfig(context.Background(), dbConfig)
 	if err != nil {
 		logger.Fatal("Failed to connect to DB", zap.Error(err))
@@ -49,7 +51,7 @@ func main() {
 	_ = persistence.NewPostgresImageRepository(pool)
 
 	// Storage
-	_ , err = storage.NewCloudinaryStorage(cfg.Cloudinary)
+	_, err = storage.NewCloudinaryStorage(cfg.Cloudinary)
 	if err != nil {
 		logger.Fatal("Failed to init storage", zap.Error(err))
 	}
@@ -59,29 +61,31 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to init queue", zap.Error(err))
 	}
-	defer q.Close()
+	defer func() {
+		_ = q.Close()
+	}()
 
 	// Processor
 	imgProcessor := processor.NewStdLibImageProcessor()
 
 	// 4. Consumer Logic
 	logger.Info("Worker starting...")
-	
+
 	err = q.Consume(context.Background(), func(job *ports.TransformJob) error {
-		logger.Info("Processing Job", 
-			zap.String("job_id", job.JobID), 
+		logger.Info("Processing Job",
+			zap.String("job_id", job.JobID),
 			zap.String("image_id", job.ImageID),
 		)
-		
-		_, err := imgProcessor.Transform(context.Background(), nil, job.Spec)
-		if err != nil {
-			logger.Warn("Processor Error (expected usage of bimg)", zap.Error(err))
+
+		_, terr := imgProcessor.Transform(context.Background(), nil, job.Spec)
+		if terr != nil {
+			logger.Warn("Processor Error (expected usage of bimg)", zap.Error(terr))
 			return nil
 		}
-		
+
 		return nil
 	})
-	
+
 	if err != nil {
 		logger.Fatal("Failed to start consumer", zap.Error(err))
 	}

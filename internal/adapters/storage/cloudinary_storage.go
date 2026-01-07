@@ -50,7 +50,7 @@ func (s *CloudinaryStorage) Get(ctx context.Context, key string) (io.ReadCloser,
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return nil, fmt.Errorf("direct get not implemented for cloudinary, use SignedURL")
 }
 
@@ -59,7 +59,7 @@ func (s *CloudinaryStorage) SignedURL(ctx context.Context, key string, expiry ti
 	if err != nil {
 		return "", err
 	}
-	
+
 	url, err := asset.String()
 	if err != nil {
 		return "", err

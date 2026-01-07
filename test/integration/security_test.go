@@ -23,7 +23,9 @@ func TestSecurityAndRateLimiting(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to call health check: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() {
+			_ = resp.Body.Close()
+		}()
 
 		assert.Equal(t, "DENY", resp.Header.Get("X-Frame-Options"))
 		assert.Equal(t, "nosniff", resp.Header.Get("X-Content-Type-Options"))
@@ -41,14 +43,16 @@ func TestSecurityAndRateLimiting(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Request failed: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() {
+			_ = resp.Body.Close()
+		}()
 
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "Should return 400 for short password")
 	})
 
 	t.Run("Rate Limiting Auth", func(t *testing.T) {
 		loginURL := baseURL + "/auth/login"
-		
+
 		// The limit is 5 per 15 mins. Let's hit it 6 times.
 		for i := 0; i < 6; i++ {
 			badLogin := map[string]string{
@@ -60,7 +64,9 @@ func TestSecurityAndRateLimiting(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed at attempt %d: %v", i, err)
 			}
-			defer resp.Body.Close()
+			defer func() {
+			_ = resp.Body.Close()
+		}()
 
 			if i == 5 {
 				assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode, "Should be rate limited on 6th attempt")

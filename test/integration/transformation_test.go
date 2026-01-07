@@ -47,7 +47,7 @@ func TestSyncTransformationIntegration(t *testing.T) {
 			"width":  200,
 			"height": 200,
 		},
-		"format": "webp",
+		"format":  "webp",
 		"quality": 80,
 	}
 	specJSON, _ := json.Marshal(spec)
@@ -76,10 +76,10 @@ func TestSyncTransformationIntegration(t *testing.T) {
 	r.ServeHTTP(w2, req)
 
 	assert.Equal(t, http.StatusOK, w2.Code)
-	
+
 	var result2 map[string]interface{}
-	json.Unmarshal(w2.Body.Bytes(), &result2)
-	
+	_ = json.Unmarshal(w2.Body.Bytes(), &result2)
+
 	assert.Equal(t, variantID1, result2["id"].(string), "Expected same variant ID (deduplication)")
 }
 
@@ -94,7 +94,7 @@ func getTestToken(t *testing.T, r *gin.Engine, c *container.Container) string {
 	regBody := fmt.Sprintf(`{"username":"%s", "password":"%s"}`, username, password)
 	req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBufferString(regBody))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	// Temporarily add registration route for this helper
 	r.POST("/auth/register", c.AuthHandler.Register)
 	w := httptest.NewRecorder()
@@ -105,7 +105,7 @@ func getTestToken(t *testing.T, r *gin.Engine, c *container.Container) string {
 	loginBody := fmt.Sprintf(`{"username":"%s", "password":"%s"}`, username, password)
 	req, _ = http.NewRequest("POST", "/auth/login", bytes.NewBufferString(loginBody))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	r.POST("/auth/login", c.AuthHandler.Login)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -114,7 +114,7 @@ func getTestToken(t *testing.T, r *gin.Engine, c *container.Container) string {
 	var loginResp struct {
 		Token string `json:"token"`
 	}
-	json.Unmarshal(w.Body.Bytes(), &loginResp)
+	_ = json.Unmarshal(w.Body.Bytes(), &loginResp)
 	return loginResp.Token
 }
 
@@ -122,11 +122,11 @@ func uploadTestImage(t *testing.T, r *gin.Engine, token string) string {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, _ := writer.CreateFormFile("file", "test.png")
-	
+
 	// Create a small 1x1 pixel PNG for testing
 	// Red dot PNG
-	part.Write([]byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDAT\x08\xd7\x63\xf8\xff\xff\x3f\x00\x05\xfe\x02\xfe\xdc\x44\x74\x73\x00\x00\x00\x00IEND\xaeB`\x82"))
-	writer.Close()
+	_, _ = part.Write([]byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDAT\x08\xd7\x63\xf8\xff\xff\x3f\x00\x05\xfe\x02\xfe\xdc\x44\x74\x73\x00\x00\x00\x00IEND\xaeB`\x82"))
+	_ = writer.Close()
 
 	req, _ := http.NewRequest("POST", "/images", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -139,6 +139,6 @@ func uploadTestImage(t *testing.T, r *gin.Engine, token string) string {
 	var resp struct {
 		ID string `json:"id"`
 	}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	return resp.ID
 }

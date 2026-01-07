@@ -20,7 +20,9 @@ func loadEnv() {
 		log.Printf("Warning: .env file not found or readable: %v", err)
 		return
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -33,7 +35,9 @@ func loadEnv() {
 			key := strings.TrimSpace(parts[0])
 			val := strings.TrimSpace(parts[1])
 			val = strings.Trim(val, `"'`)
-			os.Setenv(key, val)
+			if serr := os.Setenv(key, val); serr != nil {
+				log.Printf("Warning: failed to set env %s: %v", key, serr)
+			}
 		}
 	}
 }
@@ -78,7 +82,7 @@ func main() {
 			sqlFiles = append(sqlFiles, f.Name())
 		}
 	}
-	
+
 	// Sort by validation (ensure 001 runs before 002)
 	sort.Strings(sqlFiles)
 
@@ -88,18 +92,22 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to begin transaction: %v", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	for _, filename := range sqlFiles {
 		log.Printf("Running migration: %s", filename)
-		content, err := os.ReadFile(filepath.Join(migrationDir, filename))
-		if err != nil {
-			log.Fatalf("Failed to read file %s: %v", filename, err)
+		// G304 fix: Ensure the filename is just a filename and doesn't contain path traversal
+		safePath := filepath.Join(migrationDir, filepath.Base(filename))
+		content, rerr := os.ReadFile(safePath)
+		if rerr != nil {
+			log.Fatalf("Failed to read file %s: %v", filename, rerr)
 		}
 
 		// Execute
-		if _, err := tx.Exec(ctx, string(content)); err != nil {
-			log.Fatalf("Failed to execute migration %s: %v", filename, err)
+		if _, txerr := tx.Exec(ctx, string(content)); txerr != nil {
+			log.Fatalf("Failed to execute migration %s: %v", filename, txerr)
 		}
 	}
 

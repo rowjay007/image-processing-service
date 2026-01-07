@@ -72,33 +72,33 @@ type LimitsConfig struct {
 
 func LoadConfig() (*Config, error) {
 	v := viper.New()
-	
+
 	// Default values
 	v.SetDefault("PORT", "8080")
 	v.SetDefault("ENVIRONMENT", "development")
 	v.SetDefault("GIN_MODE", "debug")
-	
+
 	v.SetDefault("DB_MAX_CONNS", 25)
 	v.SetDefault("DB_MIN_CONNS", 5)
 	v.SetDefault("DB_MAX_CONN_LIFETIME", time.Hour)
 	v.SetDefault("DB_MAX_CONN_IDLE_TIME", 30*time.Minute)
-	
+
 	v.SetDefault("UPSTASH_REDIS_PORT", "6379")
 	v.SetDefault("UPSTASH_REDIS_TLS", true)
-	
+
 	v.SetDefault("CLOUDINARY_FOLDER", "image-processing-service")
 	v.SetDefault("CLOUDINARY_SECURE", true)
 	v.SetDefault("CLOUDINARY_USE_AUTO_FORMAT", true)
 	v.SetDefault("CLOUDINARY_USE_AUTO_QUALITY", true)
-	
+
 	v.SetDefault("QUEUE_NAME", "image-transform-jobs")
 	v.SetDefault("QUEUE_DURABLE", true)
 	v.SetDefault("QUEUE_PREFETCH_COUNT", 5)
-	
+
 	v.SetDefault("JWT_SECRET", "secret")
 	v.SetDefault("JWT_EXPIRY", 24*time.Hour)
 	v.SetDefault("JWT_ISSUER", "image-processing-service")
-	
+
 	v.SetDefault("MAX_UPLOAD_SIZE", 20971520)
 	v.SetDefault("MAX_IMAGE_WIDTH", 8000)
 	v.SetDefault("MAX_IMAGE_HEIGHT", 8000)

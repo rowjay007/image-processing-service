@@ -34,10 +34,10 @@ type CropSpec struct {
 }
 
 type WatermarkSpec struct {
-	Text      string  `json:"text,omitempty"`
-	ImageID   string  `json:"image_id,omitempty"`
-	Opacity   float64 `json:"opacity"` // 0.0-1.0
-	Gravity   string  `json:"gravity"` // center, north, southeast, etc.
+	Text    string  `json:"text,omitempty"`
+	ImageID string  `json:"image_id,omitempty"`
+	Opacity float64 `json:"opacity"` // 0.0-1.0
+	Gravity string  `json:"gravity"` // center, north, southeast, etc.
 }
 
 type FilterSpec struct {

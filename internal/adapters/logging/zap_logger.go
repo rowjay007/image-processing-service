@@ -17,7 +17,7 @@ func NewLogger(env string) (*zap.Logger, error) {
 	}
 
 	config.OutputPaths = []string{"stdout"}
-	
+
 	logger, err := config.Build()
 	if err != nil {
 		return nil, err

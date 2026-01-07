@@ -25,13 +25,13 @@ func TestEndToEndFlow(t *testing.T) {
 	password := "password123"
 
 	t.Logf("Registering user: %s", username)
-	
+
 	regPayload := map[string]string{
 		"username": username,
 		"password": password,
 	}
 	regBody, _ := json.Marshal(regPayload)
-	
+
 	resp, err := http.Post(baseURL+"/auth/register", "application/json", bytes.NewBuffer(regBody))
 	if err != nil {
 		t.Fatalf("Failed to register: %v", err)
@@ -58,8 +58,8 @@ func TestEndToEndFlow(t *testing.T) {
 	}
 
 	var loginResp map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&loginResp); err != nil {
-		t.Fatalf("Failed to decode login response: %v", err)
+	if derr := json.NewDecoder(resp.Body).Decode(&loginResp); derr != nil {
+		t.Fatalf("Failed to decode login response: %v", derr)
 	}
 	token, ok := loginResp["token"].(string)
 	if !ok || token == "" {
@@ -70,7 +70,7 @@ func TestEndToEndFlow(t *testing.T) {
 	t.Log("Testing /me endpoint...")
 	req, _ := http.NewRequest("GET", baseURL+"/me", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
-	
+
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
@@ -86,41 +86,43 @@ func TestEndToEndFlow(t *testing.T) {
 	fixturePath := "../../test_fixtures/test_image.png"
 	if _, err := os.Stat(fixturePath); err == nil {
 		t.Log("Testing Image Upload...")
-		
+
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
 		part, err := writer.CreateFormFile("file", "test_image.png")
 		if err != nil {
 			t.Fatal(err)
 		}
-		
+
 		file, err := os.Open(fixturePath)
 		if err != nil {
 			t.Fatal(err)
 		}
 		_, err = io.Copy(part, file)
-		file.Close()
-		writer.Close()
-		
+		_ = file.Close()
+		_ = writer.Close()
+
 		req, _ = http.NewRequest("POST", baseURL+"/images", body)
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 		// writer.FormDataContentType sets the multipart boundary.
 		// The individual part content-type is set implicitly or strictly we should verify if the server checks it.
 		// Our Upload implementation uses fileHeader.Header.Get("Content-Type") which might rely on the client sending it correctly in the part headers?
-		// multipart.CreateFormFile doesn't let us set headers easily. 
+		// multipart.CreateFormFile doesn't let us set headers easily.
 		// Use CreatePart if we need strict MIME.
 		// For now, let's see if sticking to extension is enough or if we need to fix the test part.
-		
+
 		resp, err = client.Do(req)
 		if err != nil {
 			t.Fatalf("Upload request failed: %v", err)
 		}
-		defer resp.Body.Close()
-		
+		defer func() {
+			_ = resp.Body.Close()
+		}()
+
 		if resp.StatusCode != http.StatusCreated {
 			respBody, _ := io.ReadAll(resp.Body)
-			t.Logf("Upload failed details: %s", string(respBody)) 
+			t.Logf("Upload failed details: %s", string(respBody))
 			// Determine if failure is critical or just missing config.
 			// Checking local server environment... Cloudinary might fail if credentials invalid?
 			// Tests should fail if feature is broken.
@@ -133,9 +135,11 @@ func TestEndToEndFlow(t *testing.T) {
 			var uploadResp struct {
 				ID string `json:"id"`
 			}
-			json.NewDecoder(resp.Body).Decode(&uploadResp)
+			if derr := json.NewDecoder(resp.Body).Decode(&uploadResp); derr != nil {
+				t.Logf("Failed to decode upload response: %v", derr)
+			}
 			imageID := uploadResp.ID
-			
+
 			// 5. Get Image
 			t.Logf("Getting Image %s...", imageID)
 			req, _ = http.NewRequest("GET", baseURL+"/images/"+imageID, nil)

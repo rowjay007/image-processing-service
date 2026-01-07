@@ -45,11 +45,7 @@ func (uc *RegisterUserUseCase) Execute(ctx context.Context, username, passwordHa
 	// Check if user exists
 	existing, err := uc.userRepo.GetByUsername(ctx, username)
 	if err != nil {
-		// If error is anything other than "not found", return it.
-		// We'll need to define what GetByUsername returns when not found.
-		// Usually nil, nil or a specific error.
-		// We'll assume nil, nil means not found for now, or check specific error.
-		// Implementation dependent.
+		return nil, err
 	}
 	if existing != nil {
 		return nil, ErrUserAlreadyExists

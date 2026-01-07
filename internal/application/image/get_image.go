@@ -38,7 +38,7 @@ func (uc *GetImageUseCase) Execute(ctx context.Context, id image.ImageID) (*imag
 	if err != nil {
 		return nil, fmt.Errorf("failed to get image: %w", err)
 	}
-	
+
 	// 3. Set Cache (Async or Sync? Sync for now, but don't block too long)
 	if img != nil {
 		if bytes, err := json.Marshal(img); err == nil {

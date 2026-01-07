@@ -16,10 +16,10 @@ func NewRedisRateLimiter(client *redis.Client) *RedisRateLimiter {
 }
 
 func (rl *RedisRateLimiter) Allow(ctx context.Context, key string, limit int, window time.Duration) (bool, error) {
-	
+
 	pipe := rl.client.Pipeline()
 	incr := pipe.Incr(ctx, key)
-	
+
 	_, err := pipe.Exec(ctx)
 	if err != nil {
 		return false, err

@@ -106,8 +106,9 @@ func main() {
 
 	// Start Server
 	srv := &http.Server{
-		Addr:    ":" + c.Config.Server.Port,
-		Handler: r,
+		Addr:              ":" + c.Config.Server.Port,
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	go func() {

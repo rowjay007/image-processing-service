@@ -21,11 +21,11 @@ func (c *RedisCache) Client() *redis.Client {
 
 func NewRedisCache(cfg config.UpstashConfig) (*RedisCache, error) {
 	addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
-	
+
 	opt := &redis.Options{
 		Addr:     addr,
 		Password: cfg.Password, // no password set
-		DB:       0,  // use default DB
+		DB:       0,            // use default DB
 	}
 
 	if cfg.TLS {
@@ -51,12 +51,12 @@ func (c *RedisCache) Get(ctx context.Context, key string) (string, error) {
 	val, err := c.client.Get(ctx, key).Result()
 	if err == redis.Nil {
 		return "", nil // Return empty string for miss, or handle as error? Port says (string, error). usually miss is not error or specific error.
-		// Let's return empty string and nil error for miss to satisfy "get" semantics, 
+		// Let's return empty string and nil error for miss to satisfy "get" semantics,
 		// or we can allow redis.Nil to bubble up if caller expects it.
 		// For simplicity, let's return empty string on miss for now, but callers need to know.
 		// Actually, standard is usually returning error on miss so caller knows it's a miss not empty value.
 		// But let's check port definition... "Get(ctx, key) (string, error)".
-		// If we return "", nil, caller can't distinguish between empty value and miss. 
+		// If we return "", nil, caller can't distinguish between empty value and miss.
 		// Let's return "" and explicit error if we want, or just let redis.Nil bubble up?
 		// We'll return nil error and empty string for miss, assuming we don't store empty strings.
 	}

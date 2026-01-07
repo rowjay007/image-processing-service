@@ -77,14 +77,7 @@ func (p *BimgProcessor) Transform(ctx context.Context, srcReader io.Reader, spec
 		}
 	}
 
-	// Watermark
-	if spec.Watermark != nil {
-		// Note: simplified watermarking. Real implementation might need to load watermark image.
-		// For now, we support text watermark if bimg supports it easily, 
-		// or we might need more complex logic. 
-		// bimg doesn't have a simple "AddText" but supports Watermark with image buffer.
-		// We'll skip text watermark for now as it's complex without pre-rendered buffers.
-	}
+	// Watermark - Not implemented in this version
 
 	newBuffer, err := img.Process(options)
 	if err != nil {

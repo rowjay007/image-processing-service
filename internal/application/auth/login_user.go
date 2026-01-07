@@ -37,13 +37,13 @@ func NewLoginUserUseCase(userRepo ports.UserRepository, hasher PasswordHasher, t
 func (uc *LoginUserUseCase) Execute(ctx context.Context, username, password string) (*user.User, string, error) {
 	u, err := uc.userRepo.GetByUsername(ctx, username)
 	if err != nil {
-		return nil, "", err 
+		return nil, "", err
 	}
 	if u == nil {
 		return nil, "", ErrInvalidCredentials
 	}
 
-	if err := uc.passwordHasher.Compare(u.PasswordHash, password); err != nil {
+	if cerr := uc.passwordHasher.Compare(u.PasswordHash, password); cerr != nil {
 		return nil, "", ErrInvalidCredentials
 	}
 

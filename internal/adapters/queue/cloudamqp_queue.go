@@ -26,29 +26,29 @@ func NewCloudAMQPQueue(cfg config.CloudAMQPConfig) (*CloudAMQPQueue, error) {
 
 	ch, err := conn.Channel()
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("failed to open channel: %w", err)
 	}
 
 	// Declare queue to ensure it exists
 	_, err = ch.QueueDeclare(
-		cfg.QueueName, // name
-		cfg.QueueDurable,   // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
+		cfg.QueueName,    // name
+		cfg.QueueDurable, // durable
+		false,            // delete when unused
+		false,            // exclusive
+		false,            // no-wait
+		nil,              // arguments
 	)
 	if err != nil {
-		ch.Close()
-		conn.Close()
+		_ = ch.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("failed to declare queue: %w", err)
 	}
 
 	if err := ch.Qos(
 		cfg.PrefetchCount, // prefetch count
-		0,     // prefetch size
-		false, // global
+		0,                 // prefetch size
+		false,             // global
 	); err != nil {
 		ch.Close()
 		conn.Close()
@@ -69,13 +69,13 @@ func (q *CloudAMQPQueue) Publish(ctx context.Context, job *ports.TransformJob) e
 	}
 
 	err = q.channel.PublishWithContext(ctx,
-		"",            // exchange
+		"",              // exchange
 		q.cfg.QueueName, // routing key
-		false,         // mandatory
-		false,         // immediate
+		false,           // mandatory
+		false,           // immediate
 		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        body,
+			ContentType:  "application/json",
+			Body:         body,
 			DeliveryMode: amqp.Persistent, // Persistent if queue is durable
 		})
 	if err != nil {
@@ -87,12 +87,12 @@ func (q *CloudAMQPQueue) Publish(ctx context.Context, job *ports.TransformJob) e
 func (q *CloudAMQPQueue) Consume(ctx context.Context, handler func(*ports.TransformJob) error) error {
 	msgs, err := q.channel.Consume(
 		q.cfg.QueueName, // queue
-		"",     // consumer
-		false,  // auto-ack (FALSE = manual ack)
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
+		"",              // consumer
+		false,           // auto-ack (FALSE = manual ack)
+		false,           // exclusive
+		false,           // no-local
+		false,           // no-wait
+		nil,             // args
 	)
 	if err != nil {
 		return fmt.Errorf("failed to register consumer: %w", err)
@@ -110,9 +110,13 @@ func (q *CloudAMQPQueue) Consume(ctx context.Context, handler func(*ports.Transf
 			// Execute handler
 			if err := handler(&job); err != nil {
 				log.Printf("Error processing job %s: %v", job.JobID, err)
-				d.Nack(false, true) 
+				if nerr := d.Nack(false, true); nerr != nil {
+					log.Printf("Error nacking message: %v", nerr)
+				}
 			} else {
-				d.Ack(false)
+				if aerr := d.Ack(false); aerr != nil {
+					log.Printf("Error acking message: %v", aerr)
+				}
 			}
 		}
 	}()
@@ -122,7 +126,7 @@ func (q *CloudAMQPQueue) Consume(ctx context.Context, handler func(*ports.Transf
 
 func (q *CloudAMQPQueue) Close() error {
 	if q.channel != nil {
-		q.channel.Close()
+		_ = q.channel.Close()
 	}
 	if q.conn != nil {
 		return q.conn.Close()

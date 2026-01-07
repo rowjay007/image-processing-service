@@ -13,7 +13,7 @@ import (
 type UploadImageUseCase struct {
 	imageRepo ports.ImageRepository
 	storage   ports.ObjectStorage
-	processor ports.ImageProcessor 
+	processor ports.ImageProcessor
 }
 
 func NewUploadImageUseCase(imageRepo ports.ImageRepository, storage ports.ObjectStorage, processor ports.ImageProcessor) *UploadImageUseCase {
@@ -33,25 +33,25 @@ type UploadInput struct {
 }
 
 func (uc *UploadImageUseCase) Execute(ctx context.Context, input UploadInput) (*image.Image, error) {
-    width, height := 0, 0
-    if uc.processor != nil {
-        meta, err := uc.processor.ExtractMetadata(ctx, input.File)
-        if err != nil {
-            return nil, fmt.Errorf("invalid image: %w", err)
-        }
-        width = meta.Width
-        height = meta.Height
-        input.MimeType = meta.MimeType
-        if _, err := input.File.Seek(0, 0); err != nil {
-             return nil, fmt.Errorf("failed to reset file pointer: %w", err)
-        }
-    }
+	width, height := 0, 0
+	if uc.processor != nil {
+		meta, err := uc.processor.ExtractMetadata(ctx, input.File)
+		if err != nil {
+			return nil, fmt.Errorf("invalid image: %w", err)
+		}
+		width = meta.Width
+		height = meta.Height
+		input.MimeType = meta.MimeType
+		if _, err := input.File.Seek(0, 0); err != nil {
+			return nil, fmt.Errorf("failed to reset file pointer: %w", err)
+		}
+	}
 
 	tempImg, err := image.New(input.OwnerID, input.Filename, "temp", input.MimeType, input.Size, width, height)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	key := fmt.Sprintf("users/%s/images/%s/original", input.OwnerID, tempImg.ID)
 	tempImg.OriginalKey = key
 

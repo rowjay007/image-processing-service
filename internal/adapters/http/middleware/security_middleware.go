@@ -12,7 +12,7 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 		c.Writer.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none';")
 		c.Writer.Header().Set("Referrer-Policy", "no-referrer")
 		c.Writer.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		
+
 		c.Next()
 	}
 }
