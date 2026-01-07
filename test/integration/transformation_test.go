@@ -2,6 +2,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"mime/multipart"
@@ -15,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"image-processing-service/internal/container"
+	"image-processing-service/internal/database"
 )
 
 func TestSyncTransformationIntegration(t *testing.T) {
@@ -25,6 +27,10 @@ func TestSyncTransformationIntegration(t *testing.T) {
 	c, err := container.NewContainer()
 	require.NoError(t, err)
 	defer c.Close()
+
+	migrationDir := "../../migrations"
+	err = database.RunMigrations(context.Background(), c.DB, migrationDir)
+	require.NoError(t, err)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -84,18 +90,13 @@ func TestSyncTransformationIntegration(t *testing.T) {
 }
 
 func getTestToken(t *testing.T, r *gin.Engine, c *container.Container) string {
-	// Re-using the same login logic from other tests or just calling the handler
-	// For simplicity, let's assume we can register/login or use a mock token if we can
-	// But let's do a real login flow for true integration
 	username := fmt.Sprintf("testuser_%d", os.Getpid())
 	password := "Password123!"
 
-	// Register
 	regBody := fmt.Sprintf(`{"username":"%s", "password":"%s"}`, username, password)
 	req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBufferString(regBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	// Temporarily add registration route for this helper
 	r.POST("/auth/register", c.AuthHandler.Register)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -103,7 +104,6 @@ func getTestToken(t *testing.T, r *gin.Engine, c *container.Container) string {
 		t.Fatalf("Expected 201 Created or 409 Conflict for register, got %d: %s", w.Code, w.Body.String())
 	}
 
-	// Login
 	loginBody := fmt.Sprintf(`{"username":"%s", "password":"%s"}`, username, password)
 	req, _ = http.NewRequest("POST", "/auth/login", bytes.NewBufferString(loginBody))
 	req.Header.Set("Content-Type", "application/json")
