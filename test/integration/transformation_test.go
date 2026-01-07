@@ -84,7 +84,8 @@ func TestSyncTransformationIntegration(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w2.Code)
 
 	var result2 map[string]interface{}
-	_ = json.Unmarshal(w2.Body.Bytes(), &result2)
+	err = json.Unmarshal(w2.Body.Bytes(), &result2)
+	require.NoError(t, err)
 
 	assert.Equal(t, variantID1, result2["id"].(string), "Expected same variant ID (deduplication)")
 }
@@ -118,7 +119,8 @@ func getTestToken(t *testing.T, r *gin.Engine, c *container.Container) string {
 	var loginResp struct {
 		Token string `json:"token"`
 	}
-	_ = json.Unmarshal(w.Body.Bytes(), &loginResp)
+	err := json.Unmarshal(w.Body.Bytes(), &loginResp)
+	require.NoError(t, err)
 	return loginResp.Token
 }
 
@@ -145,6 +147,7 @@ func uploadTestImage(t *testing.T, r *gin.Engine, token string) string {
 	var resp struct {
 		ID string `json:"id"`
 	}
-	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	require.NoError(t, err)
 	return resp.ID
 }

@@ -14,23 +14,25 @@ type LocalStorage struct {
 }
 
 func NewLocalStorage(basePath string) (*LocalStorage, error) {
-	if err := os.MkdirAll(basePath, 0755); err != nil {
+	if err := os.MkdirAll(filepath.Clean(basePath), 0750); err != nil {
 		return nil, fmt.Errorf("failed to create base path: %w", err)
 	}
-	return &LocalStorage{basePath: basePath}, nil
+	return &LocalStorage{basePath: filepath.Clean(basePath)}, nil
 }
 
 func (s *LocalStorage) Put(ctx context.Context, key string, reader io.Reader, contentType string, size int64) (string, error) {
-	fullPath := filepath.Join(s.basePath, key)
-	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+	fullPath := filepath.Join(s.basePath, filepath.Clean(key))
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0750); err != nil {
 		return "", fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	file, err := os.Create(fullPath)
+	file, err := os.Create(filepath.Clean(fullPath))
 	if err != nil {
 		return "", fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	if _, err := io.Copy(file, reader); err != nil {
 		return "", fmt.Errorf("failed to write file: %w", err)
@@ -40,8 +42,8 @@ func (s *LocalStorage) Put(ctx context.Context, key string, reader io.Reader, co
 }
 
 func (s *LocalStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
-	fullPath := filepath.Join(s.basePath, key)
-	file, err := os.Open(fullPath)
+	fullPath := filepath.Join(s.basePath, filepath.Clean(key))
+	file, err := os.Open(filepath.Clean(fullPath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}

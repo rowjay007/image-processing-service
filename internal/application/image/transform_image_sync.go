@@ -16,12 +16,12 @@ type SyncTransformInput struct {
 }
 
 type TransformOutput struct {
-	ID         string
-	VariantKey string
-	MimeType   string
-	Width      int
-	Height     int
-	Size       int64
+	ID         string `json:"id"`
+	VariantKey string `json:"variant_key"`
+	MimeType   string `json:"mime_type"`
+	Width      int    `json:"width"`
+	Height     int    `json:"height"`
+	Size       int64  `json:"size"`
 }
 
 type TransformImageSyncUseCase struct {
