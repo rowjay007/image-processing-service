@@ -37,6 +37,19 @@ func NewImageHandler(
 	}
 }
 
+// Upload handles image upload
+// @Summary Upload an image
+// @Description Upload a new image for processing. Requires multipart/form-data.
+// @Tags images
+// @Accept mpfd
+// @Produce json
+// @Security BearerAuth
+// @Param file formData file true "Image file to upload"
+// @Success 201 {object} dto.UploadResponse "Image uploaded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /images [post]
 func (h *ImageHandler) Upload(c *gin.Context) {
 	userIDStr, exists := c.Get("userID")
 	if !exists {
@@ -84,6 +97,22 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 	})
 }
 
+// Transform handles image transformation
+// @Summary Transform an image
+// @Description Apply transformations to an image. Use sync=true for immediate response.
+// @Tags images
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Image ID"
+// @Param sync query boolean false "Perform transformation synchronously"
+// @Param spec body image.TransformationSpec true "Transformation metadata"
+// @Success 200 {object} dto.TransformResponse "Transformation result (sync)"
+// @Success 202 {object} map[string]interface{} "Transformation accepted (async)"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /images/{id}/transform [post]
 func (h *ImageHandler) Transform(c *gin.Context) {
 	// Parse ID
 	idStr := c.Param("id")
@@ -132,6 +161,17 @@ func (h *ImageHandler) Transform(c *gin.Context) {
 	})
 }
 
+// Get handles fetching image details
+// @Summary Get image details
+// @Description Fetch metadata and variants for a specific image
+// @Tags images
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Image ID"
+// @Success 200 {object} image.Image "Image details"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Image not found"
+// @Router /images/{id} [get]
 func (h *ImageHandler) Get(c *gin.Context) {
 	idStr := c.Param("id")
 	if idStr == "" {
@@ -152,6 +192,18 @@ func (h *ImageHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, img)
 }
 
+// List handles listing user images
+// @Summary List user images
+// @Description List all images owned by the user with pagination
+// @Tags images
+// @Produce json
+// @Security BearerAuth
+// @Param offset query int false "Offset for pagination" default(0)
+// @Param limit query int false "Limit for pagination" default(10)
+// @Success 200 {object} dto.ListImagesResponse "List of images"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /images [get]
 func (h *ImageHandler) List(c *gin.Context) {
 	userIDStr, exists := c.Get("userID")
 	if !exists {

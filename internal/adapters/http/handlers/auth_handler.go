@@ -24,6 +24,18 @@ func NewAuthHandler(registerUC *appAuth.RegisterUserUseCase, loginUC *appAuth.Lo
 	}
 }
 
+// Register handles user registration
+// @Summary Register a new user
+// @Description Create a new user account with username and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body dto.RegisterRequest true "Registration details"
+// @Success 201 {object} map[string]interface{} "User registered successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 409 {object} map[string]interface{} "User already exists"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -56,6 +68,17 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	})
 }
 
+// Login handles user authentication
+// @Summary User login
+// @Description Authenticate user and return JWT token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body dto.LoginRequest true "Login credentials"
+// @Success 200 {object} dto.AuthResponse "Login successful"
+// @Failure 401 {object} map[string]interface{} "Invalid credentials"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -79,5 +102,23 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			Username: user.Username,
 		},
 		Token: token,
+	})
+}
+
+// Me returns the current user profile
+// @Summary Get current user profile
+// @Description Get details of the currently authenticated user
+// @Tags auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "User profile details"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /me [get]
+func (h *AuthHandler) Me(c *gin.Context) {
+	userID, _ := c.Get("userID")
+	username, _ := c.Get("username")
+	c.JSON(http.StatusOK, gin.H{
+		"userId":   userID,
+		"username": username,
 	})
 }

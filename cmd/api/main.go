@@ -12,12 +12,34 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
 
+	_ "image-processing-service/docs"
 	"image-processing-service/internal/adapters/http/middleware"
 	"image-processing-service/internal/container"
 )
 
+// @title Image Processing Service API
+// @version 1.0
+// @description High-performance image processing service with synchronous and asynchronous transformations.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /api/v1
+// @query.collection.format multi
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	// Initialize Container
 	c, err := container.NewContainer()
@@ -51,6 +73,9 @@ func main() {
 	// Metrics
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
+	// Swagger
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// API Routes
 	v1 := r.Group("/api/v1")
 	{
@@ -66,15 +91,7 @@ func main() {
 		protected := v1.Group("/")
 		protected.Use(c.AuthMiddleware.Handle())
 		{
-			protected.GET("/me", func(ctx *gin.Context) {
-				userID, _ := ctx.Get("userID")
-				username, _ := ctx.Get("username")
-				ctx.JSON(http.StatusOK, gin.H{
-					"user_id":  userID,
-					"username": username,
-					"message":  "You are authenticated!",
-				})
-			})
+			protected.GET("/me", c.AuthHandler.Me)
 
 			// Image Routes
 			images := protected.Group("/images")
