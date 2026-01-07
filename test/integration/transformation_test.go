@@ -138,7 +138,9 @@ func uploadTestImage(t *testing.T, r *gin.Engine, token string) string {
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	require.Equal(t, http.StatusCreated, w.Code)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Expected 201 Created for upload, got %d: %s", w.Code, w.Body.String())
+	}
 
 	var resp struct {
 		ID string `json:"id"`

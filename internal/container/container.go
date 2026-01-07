@@ -71,7 +71,15 @@ func NewContainer() (*Container, error) {
 	userRepo := persistence.NewPostgresUserRepository(pool)
 	imageRepo := persistence.NewPostgresImageRepository(pool)
 
-	storage, serr := storage.NewCloudinaryStorage(cfg.Cloudinary)
+	var storageSvc ports.ObjectStorage
+	var serr error
+	if cfg.Cloudinary.CloudName != "" && cfg.Cloudinary.APIKey != "" {
+		storageSvc, serr = storage.NewCloudinaryStorage(cfg.Cloudinary)
+	} else {
+		log.Println("Warning: Cloudinary config missing. Using LocalStorage fallback.")
+		storageSvc, serr = storage.NewLocalStorage("/tmp/image-service")
+	}
+
 	if serr != nil {
 		return nil, fmt.Errorf("failed to init storage: %w", serr)
 	}
@@ -103,9 +111,9 @@ func NewContainer() (*Container, error) {
 	registerUC := appAuth.NewRegisterUserUseCase(userRepo)
 	loginUC := appAuth.NewLoginUserUseCase(userRepo, hasher, jwtProvider)
 
-	uploadUC := appImage.NewUploadImageUseCase(imageRepo, storage, imgProcessor)
+	uploadUC := appImage.NewUploadImageUseCase(imageRepo, storageSvc, imgProcessor)
 	asyncTransformUC := appImage.NewAsyncTransformImageUseCase(imageRepo, q)
-	syncTransformUC := appImage.NewTransformImageSyncUseCase(imageRepo, storage, imgProcessor)
+	syncTransformUC := appImage.NewTransformImageSyncUseCase(imageRepo, storageSvc, imgProcessor)
 	getUC := appImage.NewGetImageUseCase(imageRepo, cacheSvc)
 	listUC := appImage.NewListImagesUseCase(imageRepo, cacheSvc)
 
