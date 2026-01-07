@@ -65,8 +65,8 @@ func TestSecurityAndRateLimiting(t *testing.T) {
 				t.Fatalf("Failed at attempt %d: %v", i, err)
 			}
 			defer func() {
-			_ = resp.Body.Close()
-		}()
+				_ = resp.Body.Close()
+			}()
 
 			if i == 5 {
 				assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode, "Should be rate limited on 6th attempt")

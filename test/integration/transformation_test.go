@@ -109,7 +109,9 @@ func getTestToken(t *testing.T, r *gin.Engine, c *container.Container) string {
 	r.POST("/auth/login", c.AuthHandler.Login)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	require.Equal(t, http.StatusOK, w.Code)
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200 OK for login, got %d: %s", w.Code, w.Body.String())
+	}
 
 	var loginResp struct {
 		Token string `json:"token"`

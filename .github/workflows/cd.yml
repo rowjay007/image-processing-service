@@ -56,6 +56,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libvips-dev
 
+      - name: Run Migrations
+        env:
+          SUPABASE_DB_URL: postgres://user:password@localhost:5432/image_processing?sslmode=disable
+        run: go run cmd/migrate/main.go
+
       - name: Run Integration Tests
         env:
           RUN_INTEGRATION_TESTS: true

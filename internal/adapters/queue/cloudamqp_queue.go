@@ -50,8 +50,8 @@ func NewCloudAMQPQueue(cfg config.CloudAMQPConfig) (*CloudAMQPQueue, error) {
 		0,                 // prefetch size
 		false,             // global
 	); err != nil {
-		ch.Close()
-		conn.Close()
+		_ = ch.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("failed to set qos: %w", err)
 	}
 
@@ -103,7 +103,7 @@ func (q *CloudAMQPQueue) Consume(ctx context.Context, handler func(*ports.Transf
 			var job ports.TransformJob
 			if err := json.Unmarshal(d.Body, &job); err != nil {
 				log.Printf("Error unmarshalling job: %v", err)
-				d.Nack(false, false) // Dead letter or discard
+				_ = d.Nack(false, false) // Dead letter or discard
 				continue
 			}
 

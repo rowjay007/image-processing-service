@@ -42,24 +42,26 @@ func NewContainer() (*Container, error) {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	logger, err := logging.NewLogger(cfg.Server.Environment)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init logger: %w", err)
+	logger, lerr := logging.NewLogger(cfg.Server.Environment)
+	if lerr != nil {
+		return nil, fmt.Errorf("failed to init logger: %w", lerr)
 	}
 	zap.ReplaceGlobals(logger)
 
-	dbConfig, err := pgxpool.ParseConfig(cfg.Supabase.DBURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse db config: %w", err)
+	dbConfig, dberr := pgxpool.ParseConfig(cfg.Supabase.DBURL)
+	if dberr != nil {
+		return nil, fmt.Errorf("failed to parse db config: %w", dberr)
 	}
+	// #nosec G115
 	dbConfig.MaxConns = int32(cfg.Supabase.MaxConns)
+	// #nosec G115
 	dbConfig.MinConns = int32(cfg.Supabase.MinConns)
 	dbConfig.MaxConnLifetime = cfg.Supabase.MaxConnLifetime
 	dbConfig.MaxConnIdleTime = cfg.Supabase.MaxConnIdleTime
 
-	pool, err := pgxpool.NewWithConfig(context.Background(), dbConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to db: %w", err)
+	pool, p_err := pgxpool.NewWithConfig(context.Background(), dbConfig)
+	if p_err != nil {
+		return nil, fmt.Errorf("failed to connect to db: %w", p_err)
 	}
 
 	if perr := pool.Ping(context.Background()); perr != nil {
@@ -69,25 +71,25 @@ func NewContainer() (*Container, error) {
 	userRepo := persistence.NewPostgresUserRepository(pool)
 	imageRepo := persistence.NewPostgresImageRepository(pool)
 
-	storage, err := storage.NewCloudinaryStorage(cfg.Cloudinary)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init storage: %w", err)
+	storage, serr := storage.NewCloudinaryStorage(cfg.Cloudinary)
+	if serr != nil {
+		return nil, fmt.Errorf("failed to init storage: %w", serr)
 	}
 
 	imgProcessor := processor.NewBimgProcessor()
 
-	queue, err := queue.NewCloudAMQPQueue(cfg.CloudAMQP)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init queue: %w", err)
+	q, qerr := queue.NewCloudAMQPQueue(cfg.CloudAMQP)
+	if qerr != nil {
+		return nil, fmt.Errorf("failed to init queue: %w", qerr)
 	}
 
 	// Redis Cache & Rate Limiting (Optional/Resilient)
 	var cacheSvc ports.Cache
 	var rateLimiter ports.RateLimiter
 
-	redisSvc, err := cache.NewRedisCache(cfg.Upstash)
-	if err != nil {
-		log.Printf("Warning: Failed to init redis cache: %v. Caching and Rate Limiting will be DISABLED.", err)
+	redisSvc, rerr := cache.NewRedisCache(cfg.Upstash)
+	if rerr != nil {
+		log.Printf("Warning: Failed to init redis cache: %v. Caching and Rate Limiting will be DISABLED.", rerr)
 		cacheSvc = cache.NewNoOpCache()
 		rateLimiter = cache.NewNoOpRateLimiter()
 	} else {
@@ -102,7 +104,7 @@ func NewContainer() (*Container, error) {
 	loginUC := appAuth.NewLoginUserUseCase(userRepo, hasher, jwtProvider)
 
 	uploadUC := appImage.NewUploadImageUseCase(imageRepo, storage, imgProcessor)
-	asyncTransformUC := appImage.NewAsyncTransformImageUseCase(imageRepo, queue)
+	asyncTransformUC := appImage.NewAsyncTransformImageUseCase(imageRepo, q)
 	syncTransformUC := appImage.NewTransformImageSyncUseCase(imageRepo, storage, imgProcessor)
 	getUC := appImage.NewGetImageUseCase(imageRepo, cacheSvc)
 	listUC := appImage.NewListImagesUseCase(imageRepo, cacheSvc)

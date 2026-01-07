@@ -53,19 +53,19 @@ func main() {
 	}
 
 	// 3. Connect to DB
-	dbConfig, err := pgxpool.ParseConfig(cfg.Supabase.DBURL)
-	if err != nil {
-		log.Fatalf("Failed to parse DB config: %v", err)
+	dbConfig, cerr := pgxpool.ParseConfig(cfg.Supabase.DBURL)
+	if cerr != nil {
+		log.Fatalf("Failed to parse DB config: %v", cerr)
 	}
 
-	pool, err := pgxpool.NewWithConfig(context.Background(), dbConfig)
-	if err != nil {
-		log.Fatalf("Failed to connect to DB: %v", err)
+	pool, perr := pgxpool.NewWithConfig(context.Background(), dbConfig)
+	if perr != nil {
+		log.Fatalf("Failed to connect to DB: %v", perr)
 	}
 	defer pool.Close()
 
-	if err := pool.Ping(context.Background()); err != nil {
-		log.Fatalf("Failed to ping DB: %v", err)
+	if p_err := pool.Ping(context.Background()); p_err != nil {
+		log.Fatalf("Failed to ping DB: %v", p_err)
 	}
 	log.Println("Connected to Database successfully.")
 
@@ -99,8 +99,8 @@ func main() {
 	for _, filename := range sqlFiles {
 		log.Printf("Running migration: %s", filename)
 		// G304 fix: Ensure the filename is just a filename and doesn't contain path traversal
-		safePath := filepath.Join(migrationDir, filepath.Base(filename))
-		content, rerr := os.ReadFile(safePath)
+		safePath := filepath.Join(migrationDir, filepath.Clean(filename))
+		content, rerr := os.ReadFile(filepath.Clean(safePath))
 		if rerr != nil {
 			log.Fatalf("Failed to read file %s: %v", filename, rerr)
 		}

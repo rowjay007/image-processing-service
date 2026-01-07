@@ -36,7 +36,9 @@ func TestEndToEndFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to register: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
@@ -50,7 +52,9 @@ func TestEndToEndFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to login: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -76,7 +80,9 @@ func TestEndToEndFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get me: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected 200 OK for /me, got %d", resp.StatusCode)
@@ -99,6 +105,9 @@ func TestEndToEndFlow(t *testing.T) {
 			t.Fatal(err)
 		}
 		_, err = io.Copy(part, file)
+		if err != nil {
+			t.Fatal(err)
+		}
 		_ = file.Close()
 		_ = writer.Close()
 
