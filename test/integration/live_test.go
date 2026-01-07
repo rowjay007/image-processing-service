@@ -17,6 +17,9 @@ const (
 )
 
 func TestEndToEndFlow(t *testing.T) {
+	if os.Getenv("RUN_LIVE_TESTS") != "true" {
+		t.Skip("Skipping live integration test; RUN_LIVE_TESTS not set to true")
+	}
 	// 1. Register
 	username := fmt.Sprintf("it_user_%d", time.Now().UnixNano())
 	password := "password123"

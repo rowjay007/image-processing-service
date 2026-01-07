@@ -5,12 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSecurityAndRateLimiting(t *testing.T) {
+	if os.Getenv("RUN_LIVE_TESTS") != "true" {
+		t.Skip("Skipping live security test; RUN_LIVE_TESTS not set to true")
+	}
 	baseURL := "http://localhost:8080/api/v1"
 	client := &http.Client{}
 

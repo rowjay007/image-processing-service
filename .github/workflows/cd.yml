@@ -59,9 +59,11 @@ jobs:
       - name: Run Integration Tests
         env:
           RUN_INTEGRATION_TESTS: true
-          DB_URL: postgres://user:password@localhost:5432/image_processing?sslmode=disable
-          REDIS_ADDR: localhost:6379
-          RABBITMQ_URL: amqp://guest:guest@localhost:5672/
+          SUPABASE_DB_URL: postgres://user:password@localhost:5432/image_processing?sslmode=disable
+          UPSTASH_REDIS_HOST: localhost
+          UPSTASH_REDIS_PORT: 6379
+          UPSTASH_REDIS_TLS: false
+          CLOUDAMQP_URL: amqp://guest:guest@localhost:5672/
           # Storage/Monitoring mocked or using test credentials if provided
         run: go test -v ./test/integration/...
 

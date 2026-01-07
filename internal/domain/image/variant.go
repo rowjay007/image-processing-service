@@ -9,14 +9,14 @@ import (
 
 // Variant represents a transformed version of an original image.
 type Variant struct {
-	ID         uuid.UUID
-	VariantKey string // Storage key (path)
-	SpecHash   string // Hash of the transformation spec
-	Size       int64  // File size in bytes
-	MimeType   string
-	Width      int
-	Height     int
-	CreatedAt  time.Time
+	ID         uuid.UUID `json:"id"`
+	VariantKey string    `json:"variant_key"`
+	SpecHash   string    `json:"spec_hash"`
+	Size       int64     `json:"size"`
+	MimeType   string    `json:"mime_type"`
+	Width      int       `json:"width"`
+	Height     int       `json:"height"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 var (

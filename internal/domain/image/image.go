@@ -12,16 +12,16 @@ import (
 type ImageID string
 
 type Image struct {
-	ID          ImageID
-	OwnerID     user.UserID
-	Filename    string
-	OriginalKey string 
-	Size        int64
-	MimeType    string
-	Width       int
-	Height      int
-	Variants    []Variant
-	CreatedAt   time.Time
+	ID          ImageID     `json:"id"`
+	OwnerID     user.UserID `json:"owner_id"`
+	Filename    string      `json:"filename"`
+	OriginalKey string      `json:"original_key"`
+	Size        int64       `json:"size"`
+	MimeType    string      `json:"mime_type"`
+	Width       int         `json:"width"`
+	Height      int         `json:"height"`
+	Variants    []Variant   `json:"variants"`
+	CreatedAt   time.Time   `json:"created_at"`
 }
 
 var (

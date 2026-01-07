@@ -25,7 +25,8 @@ linters-settings:
       - name: exported
         disabled: true # Temporarily disabled to avoid noise in early phase
   govet:
-    check-shadowing: true
+    enable:
+      - shadow
 
 issues:
   exclude-use-default: false
