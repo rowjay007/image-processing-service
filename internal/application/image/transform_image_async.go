@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"image-processing-service/internal/adapters/monitoring"
 	"image-processing-service/internal/domain/image"
 	"image-processing-service/internal/ports"
 
@@ -62,8 +63,10 @@ func (uc *AsyncTransformImageUseCase) Execute(ctx context.Context, input AsyncTr
 	}
 
 	if err := uc.queue.Publish(ctx, job); err != nil {
+		monitoring.RecordTransformation("async", "failure")
 		return nil, fmt.Errorf("failed to publish job: %w", err)
 	}
 
+	monitoring.RecordTransformation("async", "success")
 	return &AsyncTransformOutput{ID: jobID}, nil
 }

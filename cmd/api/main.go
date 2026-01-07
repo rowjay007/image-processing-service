@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
 	"image-processing-service/internal/adapters/http/middleware"
@@ -29,7 +30,9 @@ func main() {
 	if c.Config.Server.GinMode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	r := gin.Default()
+	r := gin.New()
+	r.Use(middleware.LoggingMiddleware(c.Logger))
+	r.Use(gin.Recovery())
 
 	// Middlewares
 	r.Use(middleware.CORSMiddleware())
@@ -44,6 +47,9 @@ func main() {
 		c.Logger.Info("Health check HEAD request received")
 		ctx.Status(http.StatusOK)
 	})
+
+	// Metrics
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// API Routes
 	v1 := r.Group("/api/v1")

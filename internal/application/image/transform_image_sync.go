@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"image-processing-service/internal/adapters/monitoring"
 	"image-processing-service/internal/domain/image"
 	"image-processing-service/internal/ports"
 )
@@ -51,6 +52,7 @@ func (uc *TransformImageSyncUseCase) Execute(ctx context.Context, input SyncTran
 	// 2. Check if variant already exists
 	existing, err := uc.imageRepo.GetVariantBySpecHash(ctx, input.ImageID, specHash)
 	if err == nil && existing != nil {
+		monitoring.RecordTransformation("sync", "success")
 		return &TransformOutput{
 			ID:         existing.ID.String(),
 			VariantKey: existing.VariantKey,
@@ -80,6 +82,7 @@ func (uc *TransformImageSyncUseCase) Execute(ctx context.Context, input SyncTran
 	// 5. Transform image
 	processed, err := uc.processor.Transform(ctx, srcReader, &input.Spec)
 	if err != nil {
+		monitoring.RecordTransformation("sync", "failure")
 		return nil, fmt.Errorf("transformation failed: %w", err)
 	}
 
