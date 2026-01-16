@@ -43,3 +43,10 @@ tasks:
     cmds:
       - rm -rf bin/
       - rm -f coverage.txt
+      - rm -rf api/gen/
+
+  proto:generate:
+    desc: Generate Go code from Protobuf definitions (using Buf)
+    cmds:
+      - mkdir -p api/gen/go
+      - docker run --rm -v $(pwd):/workspace -w /workspace bufbuild/buf generate

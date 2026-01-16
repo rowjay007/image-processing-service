@@ -1,0 +1,12 @@
+version: v1
+name: buf.build/rowjay/image-processing
+deps: []
+build:
+  excludes:
+    - vendor
+lint:
+  use:
+    - DEFAULT
+breaking:
+  use:
+    - DEFAULT
