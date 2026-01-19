@@ -10,12 +10,12 @@ import (
 )
 
 type AuthMiddleware struct {
-	authProvider ports.AuthProvider
+	validator ports.TokenValidator
 }
 
-func NewAuthMiddleware(authProvider ports.AuthProvider) *AuthMiddleware {
+func NewAuthMiddleware(validator ports.TokenValidator) *AuthMiddleware {
 	return &AuthMiddleware{
-		authProvider: authProvider,
+		validator: validator,
 	}
 }
 
@@ -34,7 +34,7 @@ func (m *AuthMiddleware) Handle() gin.HandlerFunc {
 		}
 
 		tokenString := parts[1]
-		claims, err := m.authProvider.ValidateToken(tokenString)
+		claims, err := m.validator.ValidateToken(tokenString)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
 			return

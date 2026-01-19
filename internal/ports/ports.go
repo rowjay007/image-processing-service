@@ -87,10 +87,15 @@ type Queue interface {
 	Consume(ctx context.Context, handler func(*TransformJob) error) error
 }
 
+// TokenValidator defines operations for validating authentication tokens.
+type TokenValidator interface {
+	ValidateToken(token string) (*Claims, error)
+}
+
 // AuthProvider defines operations for token management.
 type AuthProvider interface {
+	TokenValidator
 	GenerateToken(userID user.UserID, username string) (string, error)
-	ValidateToken(token string) (*Claims, error)
 }
 
 // Claims represents the data embedded in a JWT.

@@ -8,8 +8,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	"image-processing-service/internal/adapters/auth"
 	"image-processing-service/internal/adapters/cache"
+	"image-processing-service/internal/adapters/grpc/clients"
 	"image-processing-service/internal/adapters/http/handlers"
 	"image-processing-service/internal/adapters/http/middleware"
 	"image-processing-service/internal/adapters/logging"
@@ -17,7 +17,6 @@ import (
 	"image-processing-service/internal/adapters/processor"
 	"image-processing-service/internal/adapters/queue"
 	"image-processing-service/internal/adapters/storage"
-	appAuth "image-processing-service/internal/application/auth"
 	appImage "image-processing-service/internal/application/image"
 	"image-processing-service/internal/config"
 	"image-processing-service/internal/ports"
@@ -30,6 +29,7 @@ type Container struct {
 
 	AuthHandler    *handlers.AuthHandler
 	AuthMiddleware *middleware.AuthMiddleware
+	AuthClient     *clients.AuthGRPCClient
 
 	ImageHandler *handlers.ImageHandler
 
@@ -68,7 +68,6 @@ func NewContainer() (*Container, error) {
 		log.Printf("Warning: Failed to ping database: %v", perr)
 	}
 
-	userRepo := persistence.NewPostgresUserRepository(pool)
 	imageRepo := persistence.NewPostgresImageRepository(pool)
 
 	var storageSvc ports.ObjectStorage
@@ -105,11 +104,11 @@ func NewContainer() (*Container, error) {
 		rateLimiter = cache.NewRedisRateLimiter(redisSvc.Client())
 	}
 
-	jwtProvider := auth.NewJWTProvider(cfg.JWT)
-	hasher := auth.NewBcryptPasswordHasher()
-
-	registerUC := appAuth.NewRegisterUserUseCase(userRepo)
-	loginUC := appAuth.NewLoginUserUseCase(userRepo, hasher, jwtProvider)
+	// Auth Service Client (gRPC)
+	authClient, err := clients.NewAuthGRPCClient(cfg.Server.AuthServiceAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to init auth client: %w", err)
+	}
 
 	uploadUC := appImage.NewUploadImageUseCase(imageRepo, storageSvc, imgProcessor)
 	asyncTransformUC := appImage.NewAsyncTransformImageUseCase(imageRepo, q)
@@ -117,8 +116,8 @@ func NewContainer() (*Container, error) {
 	getUC := appImage.NewGetImageUseCase(imageRepo, cacheSvc)
 	listUC := appImage.NewListImagesUseCase(imageRepo, cacheSvc)
 
-	authHandler := handlers.NewAuthHandler(registerUC, loginUC, hasher)
-	authMiddleware := middleware.NewAuthMiddleware(jwtProvider)
+	authHandler := handlers.NewAuthHandler(authClient)
+	authMiddleware := middleware.NewAuthMiddleware(authClient)
 	imageHandler := handlers.NewImageHandler(uploadUC, asyncTransformUC, syncTransformUC, getUC, listUC)
 
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(rateLimiter)
@@ -129,6 +128,7 @@ func NewContainer() (*Container, error) {
 		DB:                  pool,
 		AuthHandler:         authHandler,
 		AuthMiddleware:      authMiddleware,
+		AuthClient:          authClient,
 		ImageHandler:        imageHandler,
 		RateLimitMiddleware: rateLimitMiddleware,
 	}, nil
@@ -137,5 +137,8 @@ func NewContainer() (*Container, error) {
 func (c *Container) Close() {
 	if c.DB != nil {
 		c.DB.Close()
+	}
+	if c.AuthClient != nil {
+		_ = c.AuthClient.Close()
 	}
 }

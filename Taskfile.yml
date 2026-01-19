@@ -7,16 +7,22 @@ tasks:
       - go build -o bin/api cmd/api/main.go
       - go build -o bin/worker cmd/worker/main.go
       - go build -o bin/migrate cmd/migrate/main.go
+      - go build -o bin/auth cmd/auth/main.go
 
   run:api:
     desc: Run the API server
     cmds:
-      - go run cmd/api/main.go
+      - AUTH_SERVICE_ADDR=localhost:50051 go run cmd/api/main.go
 
   run:worker:
     desc: Run the background worker
     cmds:
-      - go run cmd/worker/main.go
+      - AUTH_SERVICE_ADDR=localhost:50051 go run cmd/worker/main.go
+
+  run:auth:
+    desc: Run the standalone Auth service
+    cmds:
+      - go run cmd/auth/main.go
 
   db:migrate:
     desc: Run database migrations

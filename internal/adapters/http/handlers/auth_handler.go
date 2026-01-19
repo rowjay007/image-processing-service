@@ -5,22 +5,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"image-processing-service/internal/adapters/auth"
 	"image-processing-service/internal/adapters/http/dto"
-	appAuth "image-processing-service/internal/application/auth"
+	"image-processing-service/internal/ports"
 )
 
 type AuthHandler struct {
-	registerUC *appAuth.RegisterUserUseCase
-	loginUC    *appAuth.LoginUserUseCase
-	hasher     *auth.BcryptPasswordHasher
+	authClient ports.RemoteAuthService
 }
 
-func NewAuthHandler(registerUC *appAuth.RegisterUserUseCase, loginUC *appAuth.LoginUserUseCase, hasher *auth.BcryptPasswordHasher) *AuthHandler {
+func NewAuthHandler(authClient ports.RemoteAuthService) *AuthHandler {
 	return &AuthHandler{
-		registerUC: registerUC,
-		loginUC:    loginUC,
-		hasher:     hasher,
+		authClient: authClient,
 	}
 }
 
@@ -43,26 +38,17 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	hashedPassword, err := h.hasher.Hash(req.Password)
+	userID, username, err := h.authClient.Register(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process password"})
-		return
-	}
-
-	user, err := h.registerUC.Execute(c.Request.Context(), req.Username, hashedPassword)
-	if err != nil {
-		if err == appAuth.ErrUserAlreadyExists {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-			return
-		}
+		// We could be more specific with error mapping here
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to register user: " + err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
 		"user": dto.UserResponse{
-			ID:       string(user.ID),
-			Username: user.Username,
+			ID:       userID,
+			Username: username,
 		},
 		"message": "User registered successfully. Please login.",
 	})
@@ -86,20 +72,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	user, token, err := h.loginUC.Execute(c.Request.Context(), req.Username, req.Password)
+	userID, username, token, err := h.authClient.Login(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
-		if err == appAuth.ErrInvalidCredentials {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed: " + err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials or auth service error"})
 		return
 	}
 
 	c.JSON(http.StatusOK, dto.AuthResponse{
 		User: dto.UserResponse{
-			ID:       string(user.ID),
-			Username: user.Username,
+			ID:       userID,
+			Username: username,
 		},
 		Token: token,
 	})

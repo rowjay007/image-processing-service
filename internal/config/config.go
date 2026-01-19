@@ -18,9 +18,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port        string
-	Environment string
-	GinMode     string
+	Port            string
+	Environment     string
+	GinMode         string
+	AuthServiceAddr string
 }
 
 type SupabaseConfig struct {
@@ -77,6 +78,7 @@ func LoadConfig() (*Config, error) {
 	v.SetDefault("PORT", "8080")
 	v.SetDefault("ENVIRONMENT", "development")
 	v.SetDefault("GIN_MODE", "debug")
+	v.SetDefault("AUTH_SERVICE_ADDR", "localhost:50051")
 
 	v.SetDefault("DB_MAX_CONNS", 25)
 	v.SetDefault("DB_MIN_CONNS", 5)
@@ -117,9 +119,10 @@ func LoadConfig() (*Config, error) {
 
 	return &Config{
 		Server: ServerConfig{
-			Port:        v.GetString("PORT"),
-			Environment: v.GetString("ENVIRONMENT"),
-			GinMode:     v.GetString("GIN_MODE"),
+			Port:            v.GetString("PORT"),
+			Environment:     v.GetString("ENVIRONMENT"),
+			GinMode:         v.GetString("GIN_MODE"),
+			AuthServiceAddr: v.GetString("AUTH_SERVICE_ADDR"),
 		},
 		Supabase: SupabaseConfig{
 			DBURL:           v.GetString("SUPABASE_DB_URL"),
